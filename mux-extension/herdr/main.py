@@ -10,7 +10,8 @@
   herdr_ask (ask another agent and get its answer), herdr_focus, herdr_show, herdr_screen.
 - Live state for layouts: `mux.*` hc labels on this Mux's terminal (agent, model, context, effort,
   plan/ultra/giga, compacting, sub-agents, last edited file) and a loopback control endpoint
-  (`mux.port` + `mux.token`) the muxbar mod uses to run Mux commands and ask Mux.
+  (`mux.port` label; its token is in a user-only file `mux/control/<terminal>.json`) the muxbar
+  mod uses to run Mux commands and ask Mux.
 - Sub-agent tails: a rolling markdown file per delegation/background job record, for the tail overlay.
 
 JSON-RPC 2.0 over stdin/stdout (see Mux DOCS.md "Extensions"). Stdlib only.
@@ -146,7 +147,8 @@ class MuxState:
         self.lock = threading.Lock()
         self.wake = threading.Event()
         self.reread_at = 0.0
-        self.token = secrets.token_urlsafe(24)
+        self.token = secrets.token_urlsafe(24)  # handed to mods via a user-only file, never a label
+        self.control_file = None
         self.srv = None
 
     def on_event(self, ev):
@@ -215,8 +217,14 @@ class MuxState:
         try:
             self.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _control_handler(self))
             self.srv.daemon_threads = True
+            port = self.srv.server_address[1]
+            try:  # an older build published the token as a label: take it down
+                hc("label", ME, "mux.token=", timeout=10)
+            except Exception:
+                pass
+            self.control_file = hl.write_control_file(os.path.join(APP_HOME, "mux", "control"), ME, port, self.token)
             with self.lock:
-                self.live.s.update(port=str(self.srv.server_address[1]), token=self.token)
+                self.live.s.update(port=str(port))
             threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         except OSError as e:
             hs.log(f"control endpoint failed: {e!r}", always=True)
@@ -226,6 +234,8 @@ class MuxState:
         """Mux is closing this process: take the labels down so layouts don't show a dead Mux."""
         if not ME:
             return
+        if self.control_file:
+            hl.remove_control_file(self.control_file)
         try:
             hc("label", ME, *[f"{k}=" for k in self.live.labels()], timeout=5)
         except Exception:
@@ -270,7 +280,7 @@ def _control_handler(state):
                 return self._send(401, {"error": "token"})
             if self.path == "/state":
                 with state.lock:
-                    return self._send(200, state.live.labels() | {"mux.token": ""})
+                    return self._send(200, state.live.labels())
             self._send(404, {"error": "not found"})
 
         def do_POST(self):

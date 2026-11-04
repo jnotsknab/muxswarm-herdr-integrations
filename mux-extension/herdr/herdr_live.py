@@ -14,6 +14,8 @@ Stdlib only.
 import json
 import os
 import re
+import subprocess
+import threading
 import time
 
 EFFORTS = ["low", "med", "high", "xhigh", "max"]
@@ -94,21 +96,29 @@ def edited_path(tool, args):
     return None
 
 
-_FOOTER = re.compile(r"\d+(?:\.\d+)?k/\d+(?:\.\d+)?k \(\d+%\)")
+# `225.8k/1000k (23%)` or, early in a session, `0/1000k (0%)`.
+_FOOTER = re.compile(r"\d+(?:\.\d+)?k?/\d+(?:\.\d+)?k \(\d+%\)")
+_BOX_TOP = re.compile(r"^\s*\u256d")  # the input box's top border: the footer sits right above it
+_EFFORT = re.compile(r"(?:^|[\s\u00b7])(low|med|medium|high|xhigh|max)(?=\s*(?:\u00b7|$))")
+FLAG_KEYS = ("plan", "ultra", "giga", "sub", "effort")
 
 
 def footer_flags(screen):
-    """Mode flags + effort from Mux's TUI footer line (the one with `123k/1000k (12%)`).
-    Returns {} when no footer is visible (classic renderer, another program)."""
-    lines = [ln for ln in (screen or "").splitlines() if _FOOTER.search(ln)]
-    if not lines:
-        return {}
-    # The footer is the last such line; cut off any side panel to its right.
-    line = re.split(r"[\u2502\u2503\u2551\u2588]", lines[-1])[0]
+    """Mode flags + effort from Mux's TUI footer: the line just above the input box.
+    No such footer (classic renderer, another program, a modal): every flag is "" = unknown."""
+    lines = (screen or "").splitlines()
+    line = None
+    for i in range(len(lines) - 1, 0, -1):
+        if _BOX_TOP.match(lines[i]) and _FOOTER.search(lines[i - 1]):
+            line = lines[i - 1]
+            break
+    if line is None:
+        return {k: "" for k in FLAG_KEYS}
+    line = re.split(r"[\u2502\u2503\u2551\u2588]", line)[0]  # cut off a side panel to its right
     words = [w.strip().lower() for w in line.split("\u00b7")]
     out = {"plan": "plan" in words, "ultra": "ultra" in words, "giga": "giga" in words,
-           "sub": "psub" if "psub" in words else ("sub" if "sub" in words else "")}
-    m = re.search(r"\b(low|med|medium|high|xhigh|max)\s*$", line.strip().lower())
+           "sub": "psub" if "psub" in words else ("sub" if "sub" in words else ""), "effort": ""}
+    m = _EFFORT.search(line.lower())
     if m:
         out["effort"] = "med" if m.group(1) == "medium" else m.group(1)
     return out
@@ -128,7 +138,7 @@ class Live:
     def __init__(self):
         self.s = {"agent": "", "model": "", "pct": "", "tokens": "", "window": "", "effort": "",
                   "plan": "", "ultra": "", "giga": "", "sub": "", "compacting": "0", "kids": "0",
-                  "file": "", "fileat": "", "port": "", "token": "", "session": ""}
+                  "file": "", "fileat": "", "port": "", "session": ""}
         self.sent = {}
 
     def update_info(self, info):
@@ -142,13 +152,13 @@ class Live:
                       window=_fmt_k(ctx.get("window")) if info.get("inSession") else "")
 
     def update_flags(self, flags):
+        """flags from footer_flags: True/False per mode, or "" when the footer was not readable."""
         for k in ("plan", "ultra", "giga"):
             if k in flags:
-                self.s[k] = "1" if flags[k] else "0"
-        if "sub" in flags:
-            self.s["sub"] = flags["sub"]
-        if flags.get("effort"):
-            self.s["effort"] = flags["effort"]
+                self.s[k] = "" if flags[k] == "" else ("1" if flags[k] else "0")
+        for k in ("sub", "effort"):
+            if k in flags:
+                self.s[k] = flags[k]
 
     def on_event(self, ev, kids=None):
         """Returns True when the screen footer should be re-read (a mode may have changed)."""
@@ -191,6 +201,40 @@ class Live:
         return out
 
 
+# --- control endpoint handoff ---------------------------------------------------------------
+# The endpoint token lives in a file only this user can read (never a label or a command line):
+# <app home>/mux/control/<terminal>.json = {"port", "token", "pid"}. Mods read it with readTextFile.
+def _restrict(path):
+    """Owner-only access: chmod 600 on POSIX, an ACL for this user alone on Windows."""
+    if os.name != "nt":
+        os.chmod(path, 0o600)
+        return
+    user = os.environ.get("USERNAME")
+    if user:
+        subprocess.run(["icacls", path, "/inheritance:r", "/grant:r", f"{user}:F"], capture_output=True,
+                       stdin=subprocess.DEVNULL, timeout=15, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+
+def write_control_file(folder, terminal, port, token):
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, "".join(c if c.isalnum() or c in "-_." else "_" for c in terminal) + ".json")
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        pass
+    _restrict(tmp)  # locked down before the secret goes in
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"port": port, "token": token, "pid": os.getpid()}, f)
+    os.replace(tmp, path)
+    return path
+
+
+def remove_control_file(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
 def tail_rid(ev, flows):
     """The status record a sub-agent event belongs to (flows: flowId -> rid), or None."""
     flow = ev.get("flowId")
@@ -207,10 +251,16 @@ class Tails:
         self.buf = {}
         self.dirty = set()
         self.last = 0.0
+        self.gen = 0  # bumped by clear(), so an in-flight flush never writes a cleared tail back
+        self.lock = threading.RLock()
 
     def add(self, rid, text):
         if not rid or not text:
             return
+        with self.lock:
+            self._add(rid, text)
+
+    def _add(self, rid, text):
         b = self.buf.get(rid, "") + text
         if len(b) > self.max:
             b = b[-self.max:]
@@ -229,36 +279,53 @@ class Tails:
             self.add(rid, "\n\n---\n\n")
 
     def start(self, rid, title, task):
-        self.buf[rid] = f"# {title}\n\n_{task}_\n\n"
-        self.dirty.add(rid)
+        with self.lock:
+            self.buf[rid] = f"# {title}\n\n_{task}_\n\n"
+            self.dirty.add(rid)
 
     def end(self, rid, status):
         self.add(rid, f"\n\n**{status or 'finished'}**\n")
 
     def flush(self, force=False):
+        """Write changed tails. Takes the dirty set under the lock (so an add/end during the write
+        stays dirty for the next flush) and writes outside it; a clear() during the write wins."""
         now = time.monotonic()
-        if not self.dirty or (not force and now - self.last < self.every):
-            return []
-        self.last = now
+        with self.lock:
+            if not self.dirty or (not force and now - self.last < self.every):
+                return []
+            self.last = now
+            todo = {rid: self.buf.get(rid, "") for rid in self.dirty}
+            self.dirty = set()
+            gen = self.gen
         written = []
         os.makedirs(self.folder, exist_ok=True)
-        for rid in sorted(self.dirty):
+        for rid in sorted(todo):
             path = os.path.join(self.folder, rid + ".md")
             tmp = path + ".tmp"
-            with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-                f.write(self.buf.get(rid, ""))
-            os.replace(tmp, path)
-            written.append(path)
-        self.dirty.clear()
+            try:
+                with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(todo[rid])
+                with self.lock:
+                    if self.gen != gen:  # cleared meanwhile: drop the rest
+                        os.remove(tmp)
+                        break
+                    os.replace(tmp, path)
+                written.append(path)
+            except OSError:
+                with self.lock:
+                    if self.gen == gen:
+                        self.dirty.add(rid)  # try again next flush (e.g. a reader held the file)
         return written
 
     def clear(self):
-        self.buf.clear()
-        self.dirty.clear()
-        if os.path.isdir(self.folder):
-            for n in os.listdir(self.folder):
-                if n.endswith(".md"):
-                    try:
-                        os.remove(os.path.join(self.folder, n))
-                    except OSError:
-                        pass
+        with self.lock:
+            self.gen += 1
+            self.buf.clear()
+            self.dirty.clear()
+            if os.path.isdir(self.folder):
+                for n in os.listdir(self.folder):
+                    if n.endswith(".md"):
+                        try:
+                            os.remove(os.path.join(self.folder, n))
+                        except OSError:
+                            pass

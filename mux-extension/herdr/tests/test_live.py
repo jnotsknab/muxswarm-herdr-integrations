@@ -61,7 +61,7 @@ def test_edited_path():
 def test_footer_flags_reads_mode_and_effort_and_ignores_side_panel():
     f = hl.footer_flags("transcript line\n" + FOOTER + "\n\u256d\u2500\u2500\u256e")
     assert f == {"plan": True, "ultra": False, "giga": False, "sub": "psub", "effort": "high"}
-    assert hl.footer_flags("no footer here") == {}
+    assert hl.footer_flags("no footer here") == {k: "" for k in hl.FLAG_KEYS}  # unknown, never stale
 
 
 def test_live_labels_and_diff():

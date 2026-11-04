@@ -1,6 +1,6 @@
 // Muxbar: native controls for a Mux session running in Herdr.
 // Reads the `mux.*` labels the `herdr` Mux extension sets on its terminal (live, no polling) and
-// sends actions to that extension's loopback endpoint (port + token are labels too). Mux queues
+// sends actions to that extension's loopback endpoint (port label + user-only token file). Mux queues
 // commands and runs them when the session is idle (in its TUI, while the draft is empty).
 // props: { terminal?: "t2" } pins one Mux; otherwise the Mux in the shown tab, else the most recent.
 // Other mods ask Mux with askMux() from ./ask.js (same endpoint).
