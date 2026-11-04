@@ -127,3 +127,21 @@ Tests: `python -m pytest hooks/tests mux-extension/herdr/tests -q`.
 
 Apache-2.0. The layouts reuse block structure and icons from Herdr's shipped layouts and mods
 (Apache-2.0, [herdrdev/herdr-app](https://github.com/herdrdev/herdr-app)).
+
+## Looks (Mux x Herdr themes, layouts, splash, animation)
+
+`looks/palettes.json` is the single source; `python looks/build.py` generates:
+
+- **`mux-extension/herdr-looks`**: one Mux extension with four themes, `herdr-graphite`, `herdr-ink`,
+  `herdr-moss` and `herdr-paper`, each using the colours of the Herdr theme of the same name. All four
+  share a Herdr-style shape: a rounded box input with the status line in its border (`/layout box`),
+  a rounded splash card with a compact "mux · herdr" mark and Herdr tips, a ring spinner like
+  Herdr's, calm quips, plain tool verbs, rounded tables. Switch with `/theme herdr-<look>`.
+- **Four layout + look combos** in `herdr-app/layouts`: `mux-lead` (graphite: graph strip, Mux,
+  muxbar), `mux-swarm` (ink: the Wall), `mux-review` (paper: Mux, follow pane, changes), `mux-zen`
+  (moss: one Mux, floating dock), on `ctrl-alt-shift-1..4`. Each pins its Herdr theme and has a looks strip.
+- **`looks` mod**: one click sets the shown layout's Herdr theme and sends `/theme herdr-<look>` to
+  every Mux reporting to Herdr.
+
+Your own `console.tui` styles win over any extension: if you set `compose.shape` yourself, set it to
+`box` (or remove it) to get the looks' input.

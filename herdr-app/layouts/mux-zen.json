@@ -1,0 +1,65 @@
+{
+  "id": "root",
+  "type": "row",
+  "titlebar": "none",
+  "traffic_lights": [
+    12,
+    16
+  ],
+  "background": "canvas",
+  "terminal_padding": [
+    14,
+    12
+  ],
+  "divider": {
+    "width": 1,
+    "color": "border"
+  },
+  "theme": "moss",
+  "children": [
+    {
+      "id": "work",
+      "type": "column",
+      "padding": 10,
+      "gap": 8,
+      "children": [
+        {
+          "id": "main",
+          "type": "block",
+          "content": {
+            "agent": "focused"
+          }
+        },
+        {
+          "id": "looks",
+          "type": "block",
+          "size": {
+            "px": 30
+          },
+          "radius": 8,
+          "border": {
+            "width": 1,
+            "color": "border"
+          },
+          "content": {
+            "mod": "looks",
+            "props": {
+              "look": "moss"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "floating": [
+    {
+      "id": "dock",
+      "content": {
+        "mod": "zen-dock"
+      },
+      "edge": "left",
+      "align": "center",
+      "peek": 26
+    }
+  ]
+}

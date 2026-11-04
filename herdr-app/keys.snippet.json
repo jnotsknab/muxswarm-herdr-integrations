@@ -4,7 +4,11 @@
     "ctrl-alt-4": "layout.switch:board",
     "ctrl-alt-5": "layout.switch:wall",
     "ctrl-alt-6": "layout.switch:ops",
-    "ctrl-alt-7": "layout.switch:zen"
+    "ctrl-alt-7": "layout.switch:zen",
+    "ctrl-alt-shift-1": "layout.switch:mux-lead",
+    "ctrl-alt-shift-2": "layout.switch:mux-swarm",
+    "ctrl-alt-shift-3": "layout.switch:mux-review",
+    "ctrl-alt-shift-4": "layout.switch:mux-zen"
   },
   "layout:graph": {
     "ctrl-shift-g": "layout.toggle:graph",

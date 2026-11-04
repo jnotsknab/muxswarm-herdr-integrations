@@ -1,0 +1,322 @@
+{
+  "name": "herdr-looks",
+  "version": "0.1.0",
+  "description": "Mux x Herdr looks: themes herdr-graphite / herdr-ink / herdr-moss / herdr-paper, each paired with the Herdr theme of the same name; rounded box input with the status in its border, Herdr-style splash and ring spinner. Switch with /theme herdr-<look> or the looks strip in Herdr.",
+  "themes": [
+    {
+      "name": "herdr-graphite",
+      "base": "dark",
+      "step": "#e5c07b",
+      "success": "#a6bd91",
+      "warning": "#e5c07b",
+      "error": "#f0705f",
+      "info": "#98999b",
+      "muted": "#696a6d",
+      "accent": "#96b2d7",
+      "prompt": "#eeeeef",
+      "banner": "#96b2d7",
+      "agent": "#8cbdc3",
+      "mdHeading": "#96b2d7",
+      "mdCode": "#d8be87",
+      "mdLink": "#96b2d7",
+      "mdQuote": "#98999b",
+      "cardBg": "#2c2e31",
+      "inputBg": "#24262a",
+      "codeBg": "#101114",
+      "inlineCodeBg": "#24262a",
+      "diffAddBg": "#313732",
+      "diffDelBg": "#3a2e33",
+      "diffHunkBg": "#262b33",
+      "border": "#35373a"
+    },
+    {
+      "name": "herdr-ink",
+      "base": "dark",
+      "step": "#e5c07b",
+      "success": "#89c5aa",
+      "warning": "#e5c07b",
+      "error": "#f0705f",
+      "info": "#96989c",
+      "muted": "#65696f",
+      "accent": "#91b6ee",
+      "prompt": "#eeeeef",
+      "banner": "#91b6ee",
+      "agent": "#85c4d0",
+      "mdHeading": "#91b6ee",
+      "mdCode": "#d9be82",
+      "mdLink": "#91b6ee",
+      "mdQuote": "#96989c",
+      "cardBg": "#262c34",
+      "inputBg": "#1e242c",
+      "codeBg": "#0c1016",
+      "inlineCodeBg": "#1e242c",
+      "diffAddBg": "#273639",
+      "diffDelBg": "#372c36",
+      "diffHunkBg": "#202a39",
+      "border": "#30353d"
+    },
+    {
+      "name": "herdr-moss",
+      "base": "dark",
+      "step": "#e5c07b",
+      "success": "#a0c4a2",
+      "warning": "#e5c07b",
+      "error": "#f0705f",
+      "info": "#979a99",
+      "muted": "#676c6a",
+      "accent": "#99b9cd",
+      "prompt": "#eeeeef",
+      "banner": "#99b9cd",
+      "agent": "#8bbdb5",
+      "mdHeading": "#99b9cd",
+      "mdCode": "#d4bc8b",
+      "mdLink": "#99b9cd",
+      "mdQuote": "#979a99",
+      "cardBg": "#2a302e",
+      "inputBg": "#222926",
+      "codeBg": "#0e1311",
+      "inlineCodeBg": "#222926",
+      "diffAddBg": "#2e3a32",
+      "diffDelBg": "#39322e",
+      "diffHunkBg": "#252f2f",
+      "border": "#333937"
+    },
+    {
+      "name": "herdr-paper",
+      "base": "light",
+      "step": "#9a6700",
+      "success": "#1a7f37",
+      "warning": "#9a6700",
+      "error": "#c93c2c",
+      "info": "#69696b",
+      "muted": "#69696b",
+      "accent": "#1f62d0",
+      "prompt": "#1b1b1e",
+      "banner": "#1f62d0",
+      "agent": "#0f6f74",
+      "mdHeading": "#1f62d0",
+      "mdCode": "#8f5d00",
+      "mdLink": "#1f62d0",
+      "mdQuote": "#69696b",
+      "cardBg": "#f1f1ee",
+      "inputBg": "#f1f1f2",
+      "codeBg": "#f1f1ee",
+      "inlineCodeBg": "#f1f1f2",
+      "diffAddBg": "#d6e8db",
+      "diffDelBg": "#f5d9d9",
+      "diffHunkBg": "#e4ecf9",
+      "border": "#e8e8e8"
+    }
+  ],
+  "footer": {
+    "template": "{mode} {context} || {model} {effort}"
+  },
+  "thinking": {
+    "frames": [
+      "◜",
+      "◠",
+      "◝",
+      "◞",
+      "◡",
+      "◟"
+    ],
+    "intervalMs": 90,
+    "quips": [
+      "working",
+      "reading",
+      "thinking it through",
+      "checking",
+      "putting it together",
+      "looking closer"
+    ],
+    "quipIntervalMs": 2400,
+    "shuffle": true,
+    "suffix": "…"
+  },
+  "toolLabels": {
+    "read": "Reading",
+    "write": "Writing",
+    "edit": "Editing",
+    "execute": "Running",
+    "search": "Searching",
+    "list": "Listing",
+    "fetch": "Fetching",
+    "create": "Creating",
+    "delete": "Deleting",
+    "move": "Moving",
+    "spawn": "Starting",
+    "ask": "Asking",
+    "send": "Sending",
+    "wait": "Waiting on",
+    "show": "Showing",
+    "focus": "Showing",
+    "screen": "Looking at"
+  },
+  "splash": [
+    "ctrl-alt-5 opens the Wall: every agent as a live terminal you can type into.",
+    "ctrl-shift-m toggles the Mux strip: context, effort, compact, prune.",
+    "/herdr ls lists every agent in Herdr; /herdr panel docks them here.",
+    "Agents can ask each other: herdr_ask sends a question and returns the answer.",
+    "herdr_show opens a file beside you; herdr_focus brings an agent into view.",
+    "Sub-agents show up in Graph, Board and Wall with their own icon.",
+    "Click a sub-agent anywhere in Herdr to read its live transcript.",
+    "The follow pane (ctrl-shift-f in Graph) tracks the file Mux is editing.",
+    "Switch looks from the looks strip: Herdr theme and Mux /theme together."
+  ],
+  "markdown": {
+    "tableBorder": "rounded",
+    "bullet": "•",
+    "rule": "─"
+  },
+  "tui": {
+    "regions": {
+      "notice": {
+        "okMark": "✓",
+        "warnMark": "!",
+        "errorMark": "×",
+        "ok": "success",
+        "warn": "warning",
+        "error": "error",
+        "info": "muted"
+      },
+      "header": {
+        "template": "{agent}  ·  {model}",
+        "accent": "accent"
+      },
+      "userMessage": {
+        "style": "bubble",
+        "barFg": "border"
+      },
+      "agentHeader": {
+        "mark": "●",
+        "rule": "┈",
+        "fg": "agent",
+        "ruleFg": "border"
+      },
+      "answer": {
+        "lead": "●",
+        "leadFg": "accent"
+      },
+      "reasoning": {
+        "fg": "muted",
+        "italic": true
+      },
+      "toast": {
+        "mark": "●",
+        "markFg": "accent"
+      },
+      "divider": {
+        "glyph": "│",
+        "fg": "border",
+        "activeFg": "accent"
+      },
+      "scrollbar": {
+        "thumb": "┃",
+        "track": " ",
+        "thumbFg": "border"
+      },
+      "toolCard": {
+        "dot": "●",
+        "ok": "✓",
+        "error": "×",
+        "result": "╰",
+        "railFg": "border",
+        "pendingFg": "warning",
+        "okFg": "success",
+        "errorFg": "error",
+        "labelFg": "text"
+      },
+      "diff": {
+        "corner": "╭",
+        "end": "╰",
+        "line": "─",
+        "railFg": "border"
+      },
+      "delegation": {
+        "arrow": "→",
+        "branch": "╰",
+        "mark": "●",
+        "fg": "agent"
+      },
+      "thinking": {
+        "fg": "accent"
+      },
+      "compose": {
+        "shape": "box",
+        "border": "rounded",
+        "padX": 1,
+        "borderFg": "border",
+        "gap": 0
+      },
+      "footer": {
+        "position": "border",
+        "style": "dot",
+        "separatorFg": "border"
+      },
+      "input": {
+        "prompt": "›",
+        "promptFg": "accent",
+        "placeholder": "ask Mux…",
+        "placeholderFg": "muted"
+      },
+      "palette": {
+        "selected": "›",
+        "selectedFg": "accent",
+        "titleMark": "│",
+        "titleFg": "accent"
+      },
+      "modal": {
+        "title": "●",
+        "titleFg": "accent",
+        "selected": "›",
+        "selectedFg": "accent",
+        "checked": "◉",
+        "checkedFg": "accent",
+        "unchecked": "○"
+      },
+      "panel": {
+        "frame": "rounded",
+        "frameFg": "border",
+        "header": "plain",
+        "selectedStyle": "bar",
+        "bar": "┃",
+        "tabActiveFg": "accent"
+      },
+      "block": {
+        "rail": "│",
+        "railFg": "border",
+        "titleFg": "accent"
+      },
+      "splash": {
+        "frame": "rounded",
+        "borderFg": "border",
+        "align": "center",
+        "width": 70,
+        "padY": 1,
+        "layout": [
+          "art | title message",
+          "commands",
+          "recent"
+        ],
+        "art": [
+          "╭─────╮",
+          "│ ● ● │  mux",
+          "│  ◡  │  · herdr",
+          "╰─────╯"
+        ],
+        "artFg": "accent",
+        "accentFg": "accent",
+        "title": "mux · herdr",
+        "titleFg": "accent",
+        "borderTitle": " mux {version} ",
+        "headings": "rule",
+        "headingFg": "muted",
+        "bullet": "›",
+        "bulletFg": "accent",
+        "recentCount": 3,
+        "divider": "gap",
+        "contentAlign": "left"
+      }
+    }
+  }
+}
