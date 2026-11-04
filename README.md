@@ -145,3 +145,11 @@ Apache-2.0. The layouts reuse block structure and icons from Herdr's shipped lay
 
 Your own `console.tui` styles win over any extension: if you set `compose.shape` yourself, set it to
 `box` (or remove it) to get the looks' input.
+
+## Agents know they are in Herdr
+
+`skills/herdr/SKILL.md` is a plain-markdown skill (works for Mux, Claude Code, and anything that
+reads skills): what each `herdr_*` tool / `hc` command is for, safety rules, the user's layouts and
+controls, troubleshooting. It declares `requires_env: HC_TERMINAL_ID`, so Mux lists it only when it
+runs inside a Herdr terminal. Setup (see `AGENTS.md` 3b) also adds one line to the agent's
+always-loaded memory, so a fresh session reaches for the Herdr tools without being told.
