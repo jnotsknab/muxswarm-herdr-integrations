@@ -29,7 +29,7 @@ Or `hooks/`: the status part alone, as a plain Mux hook.
 
 **Herdr side** (`herdr-app/`): the Mux icon on its rows and tabs and Mux-Swarm in the `+` menu,
 plus layouts: Graph (live node graph of machines, spaces, tabs, agents and sub-agents), Board
-(kanban by status), Wall (grid of every agent's screen), Zen (one agent and a status drawer),
+(kanban by status), Wall (every agent as a live, typeable terminal tile; Mux sub-agents as transcript tiles), Zen (one agent and a status drawer),
 Ops (remote machines: health and services). **hc templates** `mux-code` and `mux-review`.
 
 Mods that make Mux feel native in Herdr (need the extension):

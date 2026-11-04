@@ -99,11 +99,31 @@
         },
         {
           "id": "wall-body",
-          "type": "block",
-          "padding": 0,
-          "content": {
-            "mod": "wall"
-          }
+          "type": "column",
+          "padding": 8,
+          "gap": 8,
+          "children": [
+            {
+              "id": "wall-bar",
+              "type": "block",
+              "size": {
+                "px": 24
+              },
+              "content": {
+                "mod": "wall"
+              }
+            },
+            {
+              "id": "wall-empty",
+              "type": "block",
+              "content": {
+                "mod": "wall",
+                "props": {
+                  "empty": true
+                }
+              }
+            }
+          ]
         },
         {
           "id": "muxbar",
