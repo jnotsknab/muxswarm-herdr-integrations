@@ -1,92 +1,32 @@
 {
   "hooks": [
     {
-      "id": "herdr-app-session_start",
+      "id": "herdr-app-status",
       "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
+      "persistent": true,
+      "command": "python3",
+      "args": [
+        "-u",
+        "<MUX_HOME>/Hooks/herdr-app-bridge.py"
+      ],
       "when": {
-        "event": "session_start"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-user_input",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "user_input"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-agent_turn_start",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "agent_turn_start"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-tool_call",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "tool_call"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-tool_result",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "tool_result"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-delegation",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "delegation"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-turn_end",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "turn_end"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-task_complete",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "task_complete"
-      },
-      "timeoutSeconds": 10
-    },
-    {
-      "id": "herdr-app-session_end",
-      "mode": "Async",
-      "persistent": false,
-      "command": "python3 -u <MUX_HOME>/Hooks/herdr-app-bridge.py",
-      "when": {
-        "event": "session_end"
+        "event": [
+          "session_start",
+          "user_input",
+          "agent_turn_start",
+          "tool_call",
+          "tool_result",
+          "tool_denied",
+          "delegation",
+          "delegation_end",
+          "job_start",
+          "job_end",
+          "compaction",
+          "turn_end",
+          "turn_complete",
+          "task_complete",
+          "session_end"
+        ]
       },
       "timeoutSeconds": 10
     }

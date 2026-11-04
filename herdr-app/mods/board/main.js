@@ -33,6 +33,14 @@ export default class Board extends View {
         since: t?.status_ms, sub: false,
       };
     });
+    for (const t of terminals()) {
+      for (const [rid, r] of Object.entries(t.records ?? {})) {
+        list.push({
+          address: `${t.address}#${rid}`, peek: t.address, status: r.state === "error" ? "blocked" : r.state, program: t.program,
+          title: r.title || rid, msg: r.msg ?? "", where: `inside ${terms.get(t.address)?.name || t.address}`, since: t.status_ms, sub: true,
+        });
+      }
+    }
     for (const k of terminals()) {
       if (!k.parent || k.state !== "live" || !k.status || list.some((c) => c.address === k.address)) continue;
       list.push({
@@ -58,10 +66,10 @@ export default class Board extends View {
       .border_l(3)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
-      .on_click(() => (c.pane ? run("pane.focus", { pane: c.pane }) : run("terminal.peek", { terminal: c.address })))
+      .on_click(() => (c.pane ? run("pane.focus", { pane: c.pane }) : run("terminal.peek", { terminal: c.peek ?? c.address })))
       .on_mouse_down("right", (_e, cx) => {
         cx.stop_propagation();
-        run("terminal.peek", { terminal: c.address });
+        run("terminal.peek", { terminal: c.peek ?? c.address });
       })
       .child(
         h_flex().gap(8).items_center()

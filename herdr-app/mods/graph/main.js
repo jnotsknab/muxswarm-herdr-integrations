@@ -42,6 +42,18 @@ function buildTree() {
         program: k.program,
         children: depth < 4 ? kids(k.address, depth + 1) : [],
       }));
+  // A program's own sub-agents, reported as OSC 7501 child records (e.g. Mux delegations).
+  const recs = (t) =>
+    Object.entries(t?.records ?? {}).map(([rid, r]) => ({
+      kind: "sub",
+      id: `r-${t.address}-${rid}`,
+      address: t.address,
+      label: r.title || rid,
+      sub: one(r.msg) || r.state,
+      status: r.state === "error" ? "blocked" : r.state,
+      program: t.program,
+      children: [],
+    }));
 
   const sp = spaces();
   const roots = machines().map((m) => {
@@ -81,7 +93,7 @@ function buildTree() {
                 sub: one(t?.report?.msg) || p.status || (p.cwd ? p.cwd.split(/[\\/]/).pop() || p.cwd : p.program?.name ?? ""),
                 status: p.status,
                 program: p.program,
-                children: p.terminal ? kids(p.terminal, 0) : [],
+                children: p.terminal ? [...recs(t), ...kids(p.terminal, 0)] : [],
               };
             }),
         })),
