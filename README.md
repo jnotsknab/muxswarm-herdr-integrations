@@ -3,29 +3,54 @@
 [Mux-Swarm](https://github.com/jnotsknab/mux-swarm) integrations for the [Herdr app](https://herdr.dev),
 the native app built on herdr-core.
 
-- **Status hook**: Mux reports idle, working, needs you and done to Herdr's sidebar and tabs, with
-  the current tool or the first line of the answer, and titles the pane `mux: <agent>`.
-- **Mux in Herdr**: the Mux icon on its rows and tabs, and Mux-Swarm in the `+` agent menu.
-- **Layouts**: Graph (live node graph of machines, spaces, tabs, agents and sub-agents), Board
-  (kanban by status), Wall (grid of every agent's screen), Zen (one agent plus a status drawer),
-  Ops (remote machines: health and services).
-- **hc templates**: `mux-code` and `mux-review`, so any agent can start a Mux helper that reports back.
+**Mux side** (`mux-extension/herdr`, a Mux extension):
+
+- **Live status**: Herdr's sidebar and tabs show each Mux session as idle, working (with the current
+  tool), needs you (`ask_user`), done (first line of the answer) or error. The pane is titled
+  `mux: <agent>`. Every running delegation and background job is its own child record, so the Graph
+  and Board layouts show sub-agents under the lead.
+- **`/herdr`**: `ls`, `peek <t>`, `send <t> <text>`, `spawn <template|command> [task]`,
+  `layout <name>`, `panel`. Works mid-turn.
+- **Footer chip**: `herdr 4 · 1 working · 1 need you`.
+- **Docked panel** (`/herdr panel`, TUI and web UI): every Herdr agent with status; select one to
+  see its screen, then send it text, or spawn a helper from the input.
+- **Agent tools**: `herdr_list`, `herdr_spawn`, `herdr_read`, `herdr_send`, `herdr_wait`,
+  `herdr_stop`. A Mux agent can hand work to Claude Code, Codex or another Mux in its own Herdr pane,
+  wait for it and read the result.
+
+Or `hooks/`: the status part alone, as a plain Mux hook.
+
+**Herdr side** (`herdr-app/`): the Mux icon on its rows and tabs and Mux-Swarm in the `+` menu,
+plus layouts: Graph (live node graph of machines, spaces, tabs, agents and sub-agents), Board
+(kanban by status), Wall (grid of every agent's screen), Zen (one agent and a status drawer),
+Ops (remote machines: health and services). **hc templates** `mux-code` and `mux-review`.
 
 Agents: follow [AGENTS.md](AGENTS.md). People: the steps below.
 
 ## Requirements
 
-Herdr app with herdr-core (`hc`), Mux-Swarm with hooks, Python 3.8+ (stdlib only).
-Tested with herdr-app 0.1.12, hc 0.1.17 and Mux-Swarm 0.16.0-nightly on Windows 11 and Linux.
+Herdr app with herdr-core (`hc` and `herdr-app` on PATH), Mux-Swarm 0.16+ (extensions; the hook works
+on older builds), Python 3.8+ (stdlib only). Tested with herdr-app 0.1.12, hc 0.1.17 and Mux-Swarm
+0.16.0-nightly on Windows 11 and Linux.
 
 ## Manual setup
 
-**1. Status hook**
+**1. Mux: the extension** (recommended)
 
-Copy `hooks/herdr-app-bridge.py` to `<MUX_HOME>/Hooks/`. `<MUX_HOME>` is your Mux install folder
-(Windows default `%LOCALAPPDATA%\Mux-Swarm`). Add the entries from `hooks/swarm-hooks.json` to the
-`hooks` array in `<MUX_HOME>/Configs/Swarm.json`, replacing `python3` and `<MUX_HOME>` with your
-Python command and the absolute path. Restart Mux in a Herdr pane and accept the hooks prompt.
+Copy `mux-extension/herdr/` to `<MUX_HOME>/Extensions/herdr/` (`<MUX_HOME>` is your Mux install folder;
+Windows default `%LOCALAPPDATA%\Mux-Swarm`). In `Configs/Config.json`:
+
+```jsonc
+"extensions": { "enabled": true, "trusted": ["herdr"] }   // keep your other entries
+```
+
+With a sandbox backend other than `host`, also add `"unsandboxed": ["herdr"]` (it runs `hc` and writes
+to your terminal). For the agent tools, add `"herdr"` to an agent's `mcpServers` in Swarm.json.
+Then `/refresh` (or restart Mux) inside a Herdr pane.
+
+**1b. Mux: the hook instead** (status only): copy `hooks/herdr-app-bridge.py` to `<MUX_HOME>/Hooks/`
+and add the entry from `hooks/swarm-hooks.json` to `hooks` in `Configs/Swarm.json`, with your Python
+command and the absolute path. Do not install both.
 
 **2. Herdr app pieces** (into `~/.config/herdr-app`)
 
@@ -40,22 +65,19 @@ Python command and the absolute path. Restart Mux in a Herdr pane and accept the
 (`ctrl-alt-3`..`7` jump to a layout). Check a mod with `herdr-app check ~/.config/herdr-app/mods/graph`.
 For Ops, copy `mods/ops/ops.example.json` to `mods/ops/ops.json` to pin services per machine.
 
-**3. hc templates** (optional)
+**3. hc templates** (optional): copy `hc-templates/*.md` to `%APPDATA%\herdr-core\templates` (Windows)
+or `~/.config/herdr-core/templates`. On Windows, `sh` must be on PATH (Git's `bin` folder).
 
-Copy `hc-templates/*.md` to `%APPDATA%\herdr-core\templates` (Windows) or
-`~/.config/herdr-core/templates`. On Windows, `sh` must be on PATH (Git's `bin` folder).
-
-```sh
-hc run --bg --name review mux-review "Review src/x.cs. Report with hc send $HC_TERMINAL_ID"
+```text
+/herdr spawn mux-review review the diff on this branch
 ```
 
-## How the hook works
+## How status works
 
 herdr-core takes status only from [OSC 7501](https://herdr.dev/core/) reports that a program writes
-to its own terminal. Mux starts hooks without a console window, so on Windows the hook attaches to
-Mux's console (the first ancestor process that has one) and writes there; on Linux and macOS it
-writes to `/dev/tty`. It keeps a small per-terminal state file in the temp folder, orders events by
-timestamp, and only marks `done` for the lead agent. Outside a Herdr terminal it does nothing.
+to its own terminal. Mux starts hooks and extension processes without a console window, so on Windows
+the code attaches to Mux's console (the first ancestor process that has one) and writes there; on
+Linux and macOS it writes to `/dev/tty`. Outside a Herdr terminal it does nothing.
 
 | Mux event | Herdr status |
 |---|---|
@@ -63,15 +85,16 @@ timestamp, and only marks `done` for the lead agent. Outside a Herdr terminal it
 | `user_input`, `agent_turn_start` | working |
 | `tool_call` | working + tool name (`ask_user`: needs you) |
 | `tool_result` after `ask_user` | working |
-| `delegation` | working, "delegating: ..." |
-| `turn_end` / `task_complete` (lead) | done + first line of the answer |
+| `delegation` / `delegation_end` | child record per delegation (title = specialist) |
+| `job_start` / `job_end` | child record per background job |
+| `compaction` start | working, "compacting context" |
+| `turn_complete` (lead) | done + first line of the answer; idle if interrupted; error if failed |
 | `session_end` | cleared |
 
-Known limits: if two agents ask questions at the same time, the first answer moves the status back
-to working; if the state file is lost mid-session, sub-agent turns can mark the pane done early.
+On Mux builds without `turn_complete`, the lead's `turn_end` marks the turn done.
 
 Debug with `MUX_HERDR_APP_DEBUG=1` (log at `<tmp>/mux-herdr-app-hook.log`).
-Tests: `python -m pytest hooks/tests -q`.
+Tests: `python -m pytest hooks/tests mux-extension/herdr/tests -q`.
 
 ## License
 
