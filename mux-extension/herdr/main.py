@@ -178,10 +178,10 @@ class Live:
                  **({"selected": sel} if sel else {})}]
         if sel:
             try:
-                screen = hc("read", sel, "--lines", "0", timeout=10)
+                screen = hc("read", sel, "--lines", "60", timeout=10)
             except Exception as e:
                 screen = f"(could not read: {e})"
-            tail = "\n".join([l.rstrip() for l in screen.splitlines() if l.strip()][-14:])
+            tail = hs.clean_screen(screen, max_lines=14)
             kids += [{"type": "text", "text": f"{sel} screen", "color": "muted"},
                      {"type": "code", "text": tail[-4000:] or "(empty)"}]
         kids += [{"type": "input", "key": "line", "placeholder": "send to selected  |  spawn <template|cmd> <task>"},
@@ -276,8 +276,7 @@ def on_command(params):
     if sub == "peek":
         if not rest:
             return {"output": "usage: /herdr peek <terminal>"}
-        tail = "\n".join([l.rstrip() for l in do_read(rest).splitlines() if l.strip()][-30:])
-        return {"output": tail or "(empty screen)"}
+        return {"output": hs.clean_screen(do_read(rest, 120), max_lines=40) or "(empty screen)"}
     if sub == "send":
         term, _, text = rest.partition(" ")
         if not term or not text:
@@ -336,7 +335,8 @@ def on_tool(p):
         return json.dumps({"address": r.get("address"), "name": r.get("name"),
                            "note": "Runs in its own Herdr pane. Use herdr_wait then herdr_read; templates also report back with hc send."})
     if name == "read":
-        return do_read(a["terminal"], int(a.get("lines", 60)))[-12000:]
+        text = do_read(a["terminal"], int(a.get("lines", 60)))
+        return (hs.clean_screen(text) if a.get("clean") else text)[-12000:]
     if name == "send":
         if a["terminal"] == ME:
             raise RuntimeError("that terminal is this Mux session")

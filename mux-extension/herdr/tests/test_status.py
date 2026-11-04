@@ -129,3 +129,47 @@ def test_late_event_ignored_and_compaction():
 def test_title_and_rid_sanitized():
     assert hs.osc_title("a\x07b\x1bc\u00e9") == "\x1b]2;abc\x07"
     assert hs.rid_for("d", "a:b/c d") == "dabcd"
+
+
+# --- clean_screen -----------------------------------------------------------------------------
+FIX = os.path.join(HERE, "fixtures")
+
+
+def fixture(name):
+    with open(os.path.join(FIX, name), encoding="utf-8") as f:
+        return f.read()
+
+
+BOXY = "\u2500\u2501\u2502\u2503\u2551\u2588\u256d\u256e\u2570\u256f\u2554\u2557\u255a\u255d"
+
+
+def test_clean_mux_transcript_has_no_frame_glyphs_or_chrome():
+    out = hs.clean_screen(fixture("mux_history.txt"))
+    assert not any(ch in out for ch in BOXY)
+    assert "type a message" not in out and "[hc] incomplete" not in out and "k/1000k" not in out
+    assert "> download and open the example app" in out
+    assert "## ExampleAgent" in out
+    assert "* ask_user" in out and "  -> User confirmed: yes" in out
+
+
+def test_clean_drops_splash_art_keeps_text():
+    out = hs.clean_screen(fixture("mux_screen.txt"))
+    assert "\u2588" not in out and "\u255a" not in out
+    assert "/help" in out
+
+
+def test_clean_keeps_plain_shell_output():
+    raw = fixture("shell_screen.txt")
+    out = hs.clean_screen(raw)
+    assert "poll" in out and "HTTP/1.1 200 OK" in out and "[hc]" not in out
+    assert len([l for l in out.splitlines() if l.strip()]) == len([l for l in raw.splitlines() if l.strip() and "[hc]" not in l])
+
+
+def test_clean_strips_escapes_controls_and_collapses_blanks():
+    raw = "\x1b[1;31mred\x1b[0m text\x07\n\n\n\n\x1b]0;title\x07next   wide    gap\n\u2502 inner \u2502 cols \u2502\u2588"
+    assert hs.clean_screen(raw) == "red text\n\nnext  wide  gap\ninner  cols"
+
+
+def test_clean_max_lines_keeps_tail_without_leading_blank():
+    raw = "a\n\nb\n\nc\nd"
+    assert hs.clean_screen(raw, max_lines=3) == "c\nd"

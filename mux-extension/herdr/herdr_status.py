@@ -201,6 +201,54 @@ def decide(st, ev):
     return st, out
 
 
+# --- screen text for people (peek / panel) -------------------------------------------------------
+_ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]")
+_CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+_FRAME_EDGE = "\u2502\u2503\u2551\u2588\u258c\u2590\u2595\u258f"  # │ ┃ ║ █ ▌ ▐ ▕ ▏ (borders, scrollbar thumbs)
+_RULE = re.compile(r"^[\s\u2500-\u257f\u2580-\u259f\u2800-\u28ff:.\-=_~·]*$")  # lines made only of box/block glyphs
+_INLINE_RULE = re.compile(r"\s*[\u2500\u2501\u2504\u2505\u2508\u2509\u254c\u254d]{3,}\s*")
+_MARKERS = [("\u258e ", "> "), ("\u23bf ", "  -> "), ("\u25b8 ", "## "), ("\u25cf ", "* "), ("\u203a ", "> ")]
+_CHROME = re.compile(r"(type a message, or / for commands|steer the agent while it works|^\s*\[hc\] |\[calling: |"
+                     r"\u2191\u2193 move|enter select|esc cancel|^\s*(plan|psub)\s*\u00b7|\d+(\.\d+)?k/\d+k \(\d+%\))")
+
+
+def clean_screen(text, max_lines=None):
+    """Turn an `hc read` capture of a TUI into plain text: no escape codes, no box/frame/scrollbar
+    glyphs, no input box or footer, Mux transcript markers as plain prefixes, blank runs collapsed."""
+    out = []
+    for raw in _ANSI.sub("", text or "").replace("\r", "").split("\n"):
+        line = _CTRL.sub("", raw).rstrip()
+        # strip frame edges and scrollbar columns on both sides, repeatedly (╭│ ... │█)
+        line = line.strip(" " + _FRAME_EDGE + "\u256d\u256e\u2570\u256f")
+        if not line or _RULE.match(line) or _CHROME.search(line):
+            if out and out[-1] != "":
+                out.append("")
+            continue
+        line = _INLINE_RULE.sub(" ", line).rstrip()
+        # ASCII-art / banner lines (splash logos): mostly box-drawing or block glyphs
+        art = sum(1 for ch in line if "\u2500" <= ch <= "\u259f" or "\u25a0" <= ch <= "\u25ff")
+        if art >= 6 and art * 3 >= len(line.replace(" ", "")):
+            if out and out[-1] != "":
+                out.append("")
+            continue
+        # inner column separators of side-by-side boxes (│ a │ b │) -> two spaces
+        line = re.sub(r"\s*[\u2502\u2503\u2551]\s*", "  ", line)
+        for mark, plain in _MARKERS:
+            if line.startswith(mark):
+                line = plain + line[len(mark):]
+                break
+        out.append(re.sub(r"[ \t]{3,}", "  ", line))
+    while out and out[0] == "":
+        out.pop(0)
+    while out and out[-1] == "":
+        out.pop()
+    if max_lines:
+        out = out[-max_lines:]
+        while out and out[0] == "":
+            out.pop(0)
+    return "\n".join(out)
+
+
 # --- the terminal ----------------------------------------------------------------------------
 class Terminal:
     """Writes escape bytes to the terminal Mux is drawing in."""

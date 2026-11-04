@@ -1,0 +1,9 @@
+Nov 04 05:24:50 host app[1234]: 2026-11-04 05:24:50,500 INFO poll {"fetched": 170, "new": 0} "HTTP/1.1 200 OK"
+Nov 04 05:24:51 host app[1234]: 2026-11-04 05:24:51,510 INFO poll {"fetched": 171, "new": 0} "HTTP/1.1 200 OK"
+Nov 04 05:24:52 host app[1234]: 2026-11-04 05:24:52,520 INFO poll {"fetched": 172, "new": 0} "HTTP/1.1 200 OK"
+Nov 04 05:24:53 host app[1234]: 2026-11-04 05:24:53,530 INFO poll {"fetched": 173, "new": 0} "HTTP/1.1 200 OK"
+Nov 04 05:24:54 host app[1234]: 2026-11-04 05:24:54,540 INFO poll {"fetched": 174, "new": 0} "HTTP/1.1 200 OK"
+Nov 04 05:24:55 host app[1234]: 2026-11-04 05:24:55,550 INFO poll {"fetched": 175, "new": 0} "HTTP/1.1 200 OK"
+Nov 04 05:24:56 host app[1234]: 2026-11-04 05:24:56,560 INFO poll {"fetched": 176, "new": 0} "HTTP/1.1 200 OK"
+Nov 04 05:24:57 host app[1234]: 2026-11-04 05:24:57,570 INFO poll {"fetched": 177, "new": 0} "HTTP/1.1 200 OK"
+[hc] incomplete: older output may be missing

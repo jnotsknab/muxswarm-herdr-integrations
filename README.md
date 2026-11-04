@@ -9,7 +9,8 @@ the native app built on herdr-core.
   tool), needs you (`ask_user`), done (first line of the answer) or error. The pane is titled
   `mux: <agent>`. Every running delegation and background job is its own child record, so the Graph
   and Board layouts show sub-agents under the lead.
-- **`/herdr`**: `ls`, `peek <t>`, `send <t> <text>`, `spawn <template|command> [task]`,
+- **`/herdr`**: `ls`, `peek <t>` (the screen as plain text: TUI frames, scrollbars, input box and footer
+  removed), `send <t> <text>`, `spawn <template|command> [task]`,
   `layout <name>`, `panel`. Works mid-turn.
 - **Footer chip**: `herdr 4 · 1 working · 1 need you`.
 - **Docked panel** (`/herdr panel`, TUI and web UI): every Herdr agent with status; select one to

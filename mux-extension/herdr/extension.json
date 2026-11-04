@@ -2,42 +2,17 @@
   "name": "herdr",
   "version": "0.1.0",
   "description": "Herdr app integration: live agent status (with sub-agent records), /herdr command, footer chip, docked agents panel, and tools to spawn/steer/read agents in Herdr.",
-  "process": { "command": "python", "args": ["-I", "-S", "-u", "main.py"] },
-  "events": ["session_start", "session_end", "user_input", "agent_turn_start", "tool_call", "tool_result", "tool_denied",
-             "turn_end", "turn_complete", "task_complete", "delegation", "delegation_end", "job_start", "job_end", "compaction"],
+  "process": {"command": "python", "args": ["-I", "-S", "-u", "main.py"]},
+  "events": ["session_start", "session_end", "user_input", "agent_turn_start", "tool_call", "tool_result", "tool_denied", "turn_end", "turn_complete", "task_complete", "delegation", "delegation_end", "job_start", "job_end", "compaction"],
   "commands": [
-    { "name": "herdr", "description": "Herdr agents: ls, panel, peek, send, spawn, layout", "usage": "[ls|panel|peek|send|spawn|layout] ...",
-      "immediate": true, "timeoutSeconds": 120,
-      "subcommands": [
-        { "name": "ls", "description": "Agents in Herdr (this machine + remotes)" },
-        { "name": "panel", "description": "Docked live agents panel" },
-        { "name": "peek", "description": "Last screen of a terminal: /herdr peek t7" },
-        { "name": "send", "description": "Type into a terminal: /herdr send t7 <text>" },
-        { "name": "spawn", "description": "Start a helper: /herdr spawn <template|command> [task]" },
-        { "name": "layout", "description": "Switch the Herdr layout: /herdr layout graph" }
-      ] }
+    {"name": "herdr", "description": "Herdr agents: ls, panel, peek, send, spawn, layout", "usage": "[ls|panel|peek|send|spawn|layout] ...", "immediate": true, "timeoutSeconds": 120, "subcommands": [{"name": "ls", "description": "Agents in Herdr (this machine + remotes)"}, {"name": "panel", "description": "Docked live agents panel"}, {"name": "peek", "description": "Last screen of a terminal: /herdr peek t7"}, {"name": "send", "description": "Type into a terminal: /herdr send t7 <text>"}, {"name": "spawn", "description": "Start a helper: /herdr spawn <template|command> [task]"}, {"name": "layout", "description": "Switch the Herdr layout: /herdr layout graph"}]}
   ],
   "tools": [
-    { "name": "list", "description": "List the terminals and agents running in Herdr (herdr-core) on this machine and connected remotes, with their status (working, blocked = needs the user, done, idle).",
-      "timeoutSeconds": 30, "parameters": { "type": "object", "properties": {} } },
-    { "name": "spawn", "description": "Start a helper agent or program in its own Herdr pane. `agent` is an hc template name (e.g. mux-review, mux-code; templates report back to you with hc send when done) or a command line (e.g. 'claude', 'codex'). Returns its terminal address. Use herdr_wait, then herdr_read to get the result.",
-      "timeoutSeconds": 120,
-      "parameters": { "type": "object", "properties": {
-        "agent": { "type": "string", "description": "hc template name or command line" },
-        "task": { "type": "string", "description": "the task / opening message" },
-        "name": { "type": "string", "description": "optional unique name (a-z 0-9 - _)" },
-        "cwd": { "type": "string", "description": "optional working directory" } }, "required": ["agent"] } },
-    { "name": "read", "description": "Read a Herdr terminal's screen plus `lines` of history (default 60).",
-      "timeoutSeconds": 30,
-      "parameters": { "type": "object", "properties": { "terminal": { "type": "string" }, "lines": { "type": "integer" } }, "required": ["terminal"] } },
-    { "name": "send", "description": "Type text into a Herdr terminal and press Enter (steer a helper, answer its question). Refuses if it is blocked unless force=true.",
-      "timeoutSeconds": 60,
-      "parameters": { "type": "object", "properties": { "terminal": { "type": "string" }, "text": { "type": "string" }, "force": { "type": "boolean" } }, "required": ["terminal", "text"] } },
-    { "name": "wait", "description": "Wait until a Herdr terminal finishes its turn, blocks, errors or exits (default 300 s, max 1800). Returns why it stopped.",
-      "timeoutSeconds": 600,
-      "parameters": { "type": "object", "properties": { "terminal": { "type": "string" }, "timeoutSeconds": { "type": "integer" } }, "required": ["terminal"] } },
-    { "name": "stop", "description": "Stop a Herdr terminal you started.",
-      "timeoutSeconds": 30,
-      "parameters": { "type": "object", "properties": { "terminal": { "type": "string" } }, "required": ["terminal"] } }
+    {"name": "list", "description": "List the terminals and agents running in Herdr (herdr-core) on this machine and connected remotes, with their status (working, blocked = needs the user, done, idle).", "timeoutSeconds": 30, "parameters": {"type": "object", "properties": {}}},
+    {"name": "spawn", "description": "Start a helper agent or program in its own Herdr pane. `agent` is an hc template name (e.g. mux-review, mux-code; templates report back to you with hc send when done) or a command line (e.g. 'claude', 'codex'). Returns its terminal address. Use herdr_wait, then herdr_read to get the result.", "timeoutSeconds": 120, "parameters": {"type": "object", "properties": {"agent": {"type": "string", "description": "hc template name or command line"}, "task": {"type": "string", "description": "the task / opening message"}, "name": {"type": "string", "description": "optional unique name (a-z 0-9 - _)"}, "cwd": {"type": "string", "description": "optional working directory"}}, "required": ["agent"]}},
+    {"name": "read", "description": "Read a Herdr terminal's screen plus `lines` of history (default 60). clean=true strips TUI chrome (borders, scrollbars, input box, footer) for a readable transcript; default is the raw screen.", "timeoutSeconds": 30, "parameters": {"type": "object", "properties": {"terminal": {"type": "string"}, "lines": {"type": "integer"}, "clean": {"type": "boolean"}}, "required": ["terminal"]}},
+    {"name": "send", "description": "Type text into a Herdr terminal and press Enter (steer a helper, answer its question). Refuses if it is blocked unless force=true.", "timeoutSeconds": 60, "parameters": {"type": "object", "properties": {"terminal": {"type": "string"}, "text": {"type": "string"}, "force": {"type": "boolean"}}, "required": ["terminal", "text"]}},
+    {"name": "wait", "description": "Wait until a Herdr terminal finishes its turn, blocks, errors or exits (default 300 s, max 1800). Returns why it stopped.", "timeoutSeconds": 600, "parameters": {"type": "object", "properties": {"terminal": {"type": "string"}, "timeoutSeconds": {"type": "integer"}}, "required": ["terminal"]}},
+    {"name": "stop", "description": "Stop a Herdr terminal you started.", "timeoutSeconds": 30, "parameters": {"type": "object", "properties": {"terminal": {"type": "string"}}, "required": ["terminal"]}}
   ]
 }

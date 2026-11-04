@@ -1,0 +1,16 @@
+  ┃ session  ·  ExampleAgent  ·  model-x  ·  provider  ·  12 tools                                                                                                                          │
+▎ download and open the example app                                                                                                                                                         │
+  ! HelperAgent matched 0 tools. Check mcpServers in swarm.json.                                                                                                                            │
+                                                                                                                                                                                            │
+  ▸ ExampleAgent ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────                     │
+    I'll check whether the app is already installed, and if it isn't, use the package manager to install the                                                                                │
+    official build before opening it.                                                                                                                                                       │
+                                                                                                                                                                                            │
+  ? Plan to install the example app:  1. Check whether it is … · Yes                                                                                                                        │
+  ● ask_user                                                                                                                                                                                │
+    ⎿ User confirmed: yes                                                                                                                                                                   │
+  plan · psub · ● 4s · 1h 08m · ━━━━━━━━━━━━━━━━ 65.0k/1000k (6%) · 64.3k cached · model-x · ◐ high · ⇧↹
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›  type a message, or / for commands…                                                                                                                                                     │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[hc] incomplete: older output may be missing
