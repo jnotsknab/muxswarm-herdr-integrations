@@ -93,6 +93,12 @@ Linux and macOS it writes to `/dev/tty`. Outside a Herdr terminal it does nothin
 
 On Mux builds without `turn_complete`, the lead's `turn_end` marks the turn done.
 
+**Launch Python with `-I -S`** (the shipped hook snippet and extension do). Without them every Python
+start imports `site`, which runs every `.pth` file in site-packages; on Windows a pywin32 install or a
+`.pth` pointing at a network share can make that take seconds. Mux starts these processes without
+waiting on them, but many slow starts at once can stall its UI for several seconds. Both scripts are
+stdlib only, so they do not need `site`.
+
 Debug with `MUX_HERDR_APP_DEBUG=1` (log at `<tmp>/mux-herdr-app-hook.log`).
 Tests: `python -m pytest hooks/tests mux-extension/herdr/tests -q`.
 

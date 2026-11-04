@@ -6,6 +6,8 @@
       "persistent": true,
       "command": "python3",
       "args": [
+        "-I",
+        "-S",
         "-u",
         "<MUX_HOME>/Hooks/herdr-app-bridge.py"
       ],

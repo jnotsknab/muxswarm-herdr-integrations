@@ -2,7 +2,7 @@
   "name": "herdr",
   "version": "0.1.0",
   "description": "Herdr app integration: live agent status (with sub-agent records), /herdr command, footer chip, docked agents panel, and tools to spawn/steer/read agents in Herdr.",
-  "process": { "command": "python", "args": ["-u", "main.py"] },
+  "process": { "command": "python", "args": ["-I", "-S", "-u", "main.py"] },
   "events": ["session_start", "session_end", "user_input", "agent_turn_start", "tool_call", "tool_result", "tool_denied",
              "turn_end", "turn_complete", "task_complete", "delegation", "delegation_end", "job_start", "job_end", "compaction"],
   "commands": [

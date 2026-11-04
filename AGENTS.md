@@ -42,7 +42,7 @@ Back up everything you change. Report what you did and how to undo it at the end
    - if `sandbox.backend` is not `host`, add `"herdr"` to `"unsandboxed"`: it must reach `hc` and
      the user's terminal. Ask the user first and say why.
    Keep every existing entry; keep the file's encoding and line endings; confirm it parses.
-3. The `process.command` is `python`. If the user's Python is named differently, edit
+3. Keep `-I -S` in `process.args` (skips slow `site`/`.pth` start-up; the code is stdlib only). The `process.command` is `python`. If the user's Python is named differently, edit
    `extension.json` in the installed copy.
 4. Optional, for agent tools: add `"herdr"` to the `mcpServers` list of the agents that should get
    `herdr_list`, `herdr_spawn`, `herdr_read`, `herdr_send`, `herdr_wait`, `herdr_stop` in Swarm.json
