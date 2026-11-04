@@ -57,17 +57,34 @@
               },
               "min": 160,
               "radius": 10,
-              "background": "background",
               "border": {
                 "width": 1,
                 "color": "border"
               },
-              "padding": [
-                6,
-                8
-              ],
               "content": {
-                "agent": "focused"
+                "tab": "active",
+                "pane": {
+                  "gap": 8,
+                  "radius": 10,
+                  "background": "background",
+                  "lone": true,
+                  "border": {
+                    "width": 1,
+                    "color": "border"
+                  },
+                  "focus": {
+                    "width": 1,
+                    "color": "accent"
+                  },
+                  "header": {
+                    "content": {
+                      "mod": "pane"
+                    },
+                    "height": 30,
+                    "position": "top",
+                    "reveal": "always"
+                  }
+                }
               }
             }
           ]

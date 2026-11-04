@@ -23,7 +23,21 @@
       "type": "block",
       "window_drag": false,
       "content": {
-        "agent": "focused"
+        "tab": "active",
+        "pane": {
+          "gap": 8,
+          "radius": 10,
+          "background": "background",
+          "lone": true,
+          "border": {
+            "width": 0,
+            "color": "border"
+          },
+          "focus": {
+            "width": 0,
+            "color": "accent"
+          }
+        }
       }
     }
   ],
