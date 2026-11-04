@@ -6,12 +6,20 @@
 - Footer chip `herdr.agents`: agents on this machine and how many need you.
 - /herdr command: ls, panel, peek, send, spawn, layout, help.
 - Docked panel: every Herdr agent with status; select one to peek, Send/Spawn from the input.
-- Agent tools: herdr_list, herdr_spawn, herdr_read, herdr_send, herdr_wait, herdr_stop.
+- Agent tools: herdr_list, herdr_spawn, herdr_read, herdr_send, herdr_wait, herdr_stop,
+  herdr_ask (ask another agent and get its answer), herdr_focus, herdr_show, herdr_screen.
+- Live state for layouts: `mux.*` hc labels on this Mux's terminal (agent, model, context, effort,
+  plan/ultra/giga, compacting, sub-agents, last edited file) and a loopback control endpoint
+  (`mux.port` + `mux.token`) the muxbar mod uses to run Mux commands and ask Mux.
+- Sub-agent tails: a rolling markdown file per delegation/background job record, for the tail overlay.
 
 JSON-RPC 2.0 over stdin/stdout (see Mux DOCS.md "Extensions"). Stdlib only.
 """
+import hmac
+import http.server
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import sys
@@ -19,6 +27,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import herdr_live as hl  # noqa: E402
 import herdr_status as hs  # noqa: E402
 
 try:
@@ -30,6 +39,7 @@ except (AttributeError, ValueError):
 ME = os.environ.get("HC_TERMINAL_ID")  # this Mux's terminal, when it runs inside Herdr
 HC = shutil.which("hc")
 HERDR_APP = shutil.which("herdr-app")
+APP_HOME = os.environ.get("HERDR_APP_HOME") or os.path.join(os.path.expanduser("~"), ".config", "herdr-app")
 _out_lock = threading.Lock()
 _next_id = [1000]
 _pending = {}
@@ -122,6 +132,169 @@ class Status:
 
 
 STATUS = Status()
+
+
+# --- live state for layouts: mux.* labels, control endpoint, sub-agent tails -------------------
+class MuxState:
+    """Folds events + session/info into `mux.*` labels on this terminal (hc label), keeps a rolling
+    tail per sub-agent record, and serves a loopback control endpoint for the muxbar mod."""
+
+    def __init__(self):
+        self.live = hl.Live()
+        self.flows = {}  # flowId / job id -> status record id
+        self.tails = hl.Tails(os.path.join(APP_HOME, "mux", "tails", hl_safe(ME or "none")))
+        self.lock = threading.Lock()
+        self.wake = threading.Event()
+        self.reread_at = 0.0
+        self.token = secrets.token_urlsafe(24)
+        self.srv = None
+
+    def on_event(self, ev):
+        if not ME:
+            return
+        name = ev.get("event") or ""
+        flow = ev.get("flowId")
+        if name in ("text_chunk", "thinking_chunk") and not flow:
+            return  # the lead's own stream: nothing to do
+        data = ev.get("data") or {}
+        with self.lock:
+            if name == "delegation" and flow:
+                rid = hs.rid_for("d", flow)
+                self.flows[flow] = rid
+                self.tails.start(rid, data.get("to") or "specialist", hs.one_line(ev.get("summary"), 300))
+            elif name == "job_start":
+                jid = data.get("id") or ev.get("summary")
+                if jid:
+                    rid = hs.rid_for("j", jid)
+                    self.flows[jid] = rid
+                    self.tails.start(rid, data.get("agent") or ev.get("agent") or "job", "background job")
+            elif name in ("delegation_end", "job_end"):
+                rid = self.flows.pop(flow if name == "delegation_end" else data.get("id"), None)
+                if rid:
+                    self.tails.end(rid, data.get("status") or ev.get("summary"))
+            elif name == "session_start":
+                self.flows.clear()
+                self.tails.clear()
+            elif flow and flow in self.flows:
+                self.tails.on_event(ev, self.flows[flow])
+            if self.live.on_event(ev, kids=len(self.flows)):
+                self.reread_at = time.monotonic() + 1.5  # the command has not run yet when it is announced
+        if name not in ("text_chunk", "thinking_chunk"):
+            self.wake.set()
+
+    def loop(self):
+        last_info = last_flags = 0.0
+        while True:
+            self.wake.wait(2.0)
+            self.wake.clear()
+            try:
+                now = time.monotonic()
+                if now - last_info >= 3:
+                    last_info = now
+                    info = request("session/info", {}, timeout=3)
+                    if isinstance(info, dict) and "error" not in info:
+                        with self.lock:
+                            self.live.update_info(info)
+                if (self.reread_at and now >= self.reread_at) or now - last_flags >= 20:
+                    self.reread_at = 0.0
+                    last_flags = now
+                    flags = hl.footer_flags(do_read(ME, 0))
+                    with self.lock:
+                        self.live.update_flags(flags)
+                with self.lock:
+                    changed = self.live.diff()
+                if changed:
+                    hc("label", ME, *[f"{k}={v}" for k, v in changed.items()], timeout=10)
+                self.tails.flush()
+            except Exception as e:  # hc missing / core restarting: try again next round
+                hs.log(f"live state: {e!r}", always=True)
+
+    def start(self):
+        if not ME:
+            return
+        try:
+            self.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _control_handler(self))
+            self.srv.daemon_threads = True
+            with self.lock:
+                self.live.s.update(port=str(self.srv.server_address[1]), token=self.token)
+            threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        except OSError as e:
+            hs.log(f"control endpoint failed: {e!r}", always=True)
+        threading.Thread(target=self.loop, daemon=True).start()
+
+    def stop(self):
+        """Mux is closing this process: take the labels down so layouts don't show a dead Mux."""
+        if not ME:
+            return
+        try:
+            hc("label", ME, *[f"{k}=" for k in self.live.labels()], timeout=5)
+        except Exception:
+            pass
+
+    def control(self, path, body):
+        if path == "/run":
+            line = hl.control_line(body.get("action"), body.get("arg"))
+            r = request("command/run", {"line": line}, timeout=5)
+            return {"line": line, "result": r}
+        if path == "/ask":
+            text = str(body.get("text") or "").strip()
+            if not text or len(text) > 64000 or text.startswith(("/", "!")):
+                raise ValueError("ask: plain text, at most 64,000 characters")
+            return {"result": request("prompt/submit", {"text": text}, timeout=5)}
+        raise ValueError("unknown path")
+
+
+def hl_safe(s):
+    return "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in s)
+
+
+def _control_handler(state):
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _send(self, code, obj):
+            body = json.dumps(obj).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _authed(self):
+            got = self.headers.get("Authorization") or ""
+            return hmac.compare_digest(got.encode(), f"Bearer {state.token}".encode())
+
+        def do_GET(self):
+            if not self._authed():
+                return self._send(401, {"error": "token"})
+            if self.path == "/state":
+                with state.lock:
+                    return self._send(200, state.live.labels() | {"mux.token": ""})
+            self._send(404, {"error": "not found"})
+
+        def do_POST(self):
+            if not self._authed():
+                return self._send(401, {"error": "token"})
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                if n > 70000:
+                    raise ValueError("body too large")
+                body = json.loads(self.rfile.read(n) or b"{}")
+                if not isinstance(body, dict):
+                    raise ValueError("body must be an object")
+                out = state.control(self.path, body)
+                err = (out.get("result") or {}).get("error") if isinstance(out.get("result"), dict) else None
+                self._send(200 if not err else 409, out if not err else {"error": err.get("message", str(err))})
+            except ValueError as e:
+                self._send(400, {"error": str(e)})
+            except Exception as e:
+                self._send(500, {"error": str(e)[:300]})
+
+    return Handler
+
+
+MUX = MuxState()
 
 
 # --- footer chip + panel refresh loop -----------------------------------------------------------
@@ -232,6 +405,74 @@ def do_read(term, lines=0):
 def do_send(term, text, force=False):
     args = ["send", term, text, "--json"] + (["--force"] if force else [])
     return json.loads(hc(*args, timeout=60) or "{}")
+
+
+def herdr_app(*args, timeout=20):
+    if not HERDR_APP:
+        raise RuntimeError("herdr-app is not on PATH")
+    r = subprocess.run([HERDR_APP, *args], capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       stdin=subprocess.DEVNULL, timeout=timeout, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    out = (r.stdout or "").strip()
+    if r.returncode != 0:
+        try:
+            raise RuntimeError(json.loads(out)["error"])
+        except (ValueError, KeyError, TypeError):
+            raise RuntimeError(out or (r.stderr or "").strip() or f"herdr-app exited {r.returncode}")
+    return out
+
+
+def app_do(command, **args):
+    return herdr_app("do", command, json.dumps({k: v for k, v in args.items() if v is not None}))
+
+
+def do_ask(term, question, secs):
+    """Type a question into an idle agent, wait for the turn it starts, return its screen as text."""
+    if term == ME:
+        raise RuntimeError("that terminal is this Mux session")
+    try:
+        r = json.loads(hc("send", term, question, "--if", "idle", "--wait", "--timeout", str(secs), "--json",
+                          timeout=secs + 60) or "{}")
+    except RuntimeError as e:
+        if "status" in str(e) or "blocked" in str(e):
+            raise RuntimeError(f"{term} is not idle ({e}); herdr_wait for it, or herdr_send to steer it")
+        raise
+    w = r.get("wait") or {}
+    answer = hs.clean_screen(do_read(term, 200))
+    head = f"[{term}: {w.get('reason') or 'sent'}{', ' + str(w.get('status')) if w.get('status') else ''}"
+    head += "" if w.get("ended", True) else "; still working, herdr_wait then herdr_read for the rest"
+    return head + "]\n" + answer[-10000:]
+
+
+def do_show(what, target, place=None):
+    what = (what or "").lower()
+    if what == "layout":
+        app_do("layout.switch", name=target)
+        return f"layout {target}"
+    if what == "terminal":
+        app_do("terminal.peek", terminal=target)
+        return f"peeking {target}"
+    if what == "file":
+        path = os.path.abspath(os.path.expanduser(target))
+        if not os.path.isfile(path):
+            raise RuntimeError(f"no such file: {path}")
+        mod = "md-view" if path.lower().endswith((".md", ".markdown")) else "mux-follow"
+        if (place or "right") == "tab":
+            app_do("tab.new", name=os.path.basename(path), mod=mod, props={"file": path})
+        else:
+            app_do("pane.split", direction="down" if place == "down" else "right", mod=mod, props={"file": path})
+        return f"showing {path} ({mod})"
+    raise RuntimeError("what: file, terminal or layout")
+
+
+def do_screen(shot):
+    status = herdr_app("status")
+    if not shot:
+        return status
+    folder = os.path.join(APP_HOME, "mux", "shots")
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, time.strftime("herdr-%Y%m%d-%H%M%S.png"))
+    saved = herdr_app("shot", path, timeout=30).strip() or path
+    return status + f"\nscreenshot: {saved}"
 
 
 HELP = """/herdr                 agents in Herdr (this machine + remotes)
@@ -354,6 +595,18 @@ def on_tool(p):
         return hc("wait", a["terminal"], "--json", "--timeout", str(secs), timeout=secs + 30)
     if name == "stop":
         return hc("kill", a["terminal"], "--json", timeout=30)
+    if name == "ask":
+        secs = max(10, min(int(a.get("timeoutSeconds", 600)), 1800))
+        return do_ask(a["terminal"], a["question"], secs)
+    if name == "focus":
+        if a["terminal"] == ME:
+            raise RuntimeError("that terminal is this Mux session")
+        app_do("agent.focus", terminal=a["terminal"])
+        return f"showing {a['terminal']}"
+    if name == "show":
+        return do_show(a.get("what"), a["target"], a.get("place"))
+    if name == "screen":
+        return do_screen(bool(a.get("shot")))
     raise RuntimeError(f"unknown tool {name}")
 
 
@@ -361,11 +614,12 @@ def on_tool(p):
 def handle(msg):
     rid, method, params = msg.get("id"), msg.get("method"), msg.get("params") or {}
     if method is None and rid in _pending:  # a reply to our request
-        _pending[rid][1] = msg.get("result")
+        _pending[rid][1] = msg.get("result") if "error" not in msg else {"error": msg["error"]}
         _pending[rid][0].set()
         return
     if method == "event":
         STATUS.on_event(params)
+        MUX.on_event(params)
         if params.get("event") in ("turn_complete", "session_start", "session_end", "delegation", "delegation_end"):
             LIVE.wake.set()
         return
@@ -394,6 +648,7 @@ def handle(msg):
 
 def main():
     threading.Thread(target=LIVE.loop, daemon=True).start()
+    MUX.start()
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -406,6 +661,7 @@ def main():
             handle(msg)
         except Exception as e:
             hs.log(f"handle failed: {e!r}", always=True)
+    MUX.stop()
 
 
 if __name__ == "__main__":
