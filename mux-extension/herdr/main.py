@@ -199,6 +199,11 @@ class Live:
         self.wake.set()
         return r
 
+    def close(self):
+        self.panel_open = False
+        r = request("ui/close", {"id": "herdr"})
+        return bool((r or {}).get("closed"))
+
 
 LIVE = Live()
 
@@ -231,6 +236,7 @@ def do_send(term, text, force=False):
 
 HELP = """/herdr                 agents in Herdr (this machine + remotes)
 /herdr panel           docked live panel (select an agent to peek; send/spawn from its input)
+/herdr panel close     close the panel
 /herdr peek <t>        last screen of a terminal
 /herdr send <t> <text> type text into a terminal and press Enter
 /herdr spawn <template|command> [task]   start a helper in Herdr (templates report back here)
@@ -271,6 +277,8 @@ def on_command(params):
     if sub in ("", "ls", "list"):
         return {"output": cmd_ls()}
     if sub == "panel":
+        if rest in ("close", "off", "hide"):
+            return {"output": "herdr panel closed" if LIVE.close() else "herdr panel is not open"}
         LIVE.open()
         return {}
     if sub == "peek":
