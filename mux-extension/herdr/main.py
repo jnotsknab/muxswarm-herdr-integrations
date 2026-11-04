@@ -429,18 +429,46 @@ def do_ask(term, question, secs):
     """Type a question into an idle agent, wait for the turn it starts, return its screen as text."""
     if term == ME:
         raise RuntimeError("that terminal is this Mux session")
-    try:
-        r = json.loads(hc("send", term, question, "--if", "idle", "--wait", "--timeout", str(secs), "--json",
-                          timeout=secs + 60) or "{}")
-    except RuntimeError as e:
-        if "status" in str(e) or "blocked" in str(e):
-            raise RuntimeError(f"{term} is not idle ({e}); herdr_wait for it, or herdr_send to steer it")
-        raise
+    # "done" (finished while nobody looked) is ready for input like "idle", but `hc send --if` only
+    # takes idle|working, so check the word first and only pin --if for a plain idle agent.
+    word = status_word(hc_json("get", term))
+    if word in ("working", "blocked"):
+        raise RuntimeError(f"{term} is {word}; herdr_wait for it (or herdr_send to steer it), then ask again")
+    pin = ["--if", "idle"] if word == "idle" else []
+    r = json.loads(hc("send", term, question, *pin, "--wait", "--timeout", str(secs), "--json",
+                      timeout=secs + 60) or "{}")
     w = r.get("wait") or {}
     answer = hs.clean_screen(do_read(term, 200))
     head = f"[{term}: {w.get('reason') or 'sent'}{', ' + str(w.get('status')) if w.get('status') else ''}"
     head += "" if w.get("ended", True) else "; still working, herdr_wait then herdr_read for the rest"
     return head + "]\n" + answer[-10000:]
+
+
+# Mux stops an extension tool call at its timeoutSeconds (max 600); herdr_ask must answer before that.
+ASK_MAX_SECONDS = 540
+
+
+def has_pane(term):
+    """Whether the Herdr window shows this terminal in a pane (a sub-agent started with hc run has none)."""
+    try:
+        data = json.loads(herdr_app("ls"))
+    except (RuntimeError, ValueError):
+        return True  # can't tell: let agent.focus try
+    for s in data.get("spaces", []):
+        for tab in s.get("tabs", []):
+            for t in tab.get("terminals", []):
+                if t.get("terminal") == term or t.get("name") == term:
+                    return bool(t.get("pane"))
+    return False
+
+
+def do_focus(term):
+    """Bring a terminal into view: its pane when it has one, else a peek (sub-agents have no pane)."""
+    if has_pane(term):
+        app_do("agent.focus", terminal=term)
+        return f"showing {term}"
+    app_do("terminal.peek", terminal=term)
+    return f"peeking {term} (it has no pane; the user can keep it as a tab from the peek)"
 
 
 def do_show(what, target, place=None):
@@ -596,13 +624,12 @@ def on_tool(p):
     if name == "stop":
         return hc("kill", a["terminal"], "--json", timeout=30)
     if name == "ask":
-        secs = max(10, min(int(a.get("timeoutSeconds", 600)), 1800))
+        secs = max(10, min(int(a.get("timeoutSeconds", 300)), ASK_MAX_SECONDS))
         return do_ask(a["terminal"], a["question"], secs)
     if name == "focus":
         if a["terminal"] == ME:
             raise RuntimeError("that terminal is this Mux session")
-        app_do("agent.focus", terminal=a["terminal"])
-        return f"showing {a['terminal']}"
+        return do_focus(a["terminal"])
     if name == "show":
         return do_show(a.get("what"), a["target"], a.get("place"))
     if name == "screen":
