@@ -53,7 +53,8 @@ def test_every_simple_command_is_on_the_mux_allowlist():
 def test_edited_path():
     assert hl.edited_path("Filesystem_edit_file", {"path": "C:/a/b.py"}) == "C:/a/b.py"
     assert hl.edited_path("write_file", '{"file_path": "/x/y.md"}') == "/x/y.md"
-    assert hl.edited_path("Filesystem_read_text_file", {"path": "C:/a"}) is None
+    assert hl.edited_path("Filesystem_read_text_file", {"path": "C:/a"}) == "C:/a"  # reads are followed too
+    assert hl.edited_path("Filesystem_list_directory", {"path": "C:/a"}) is None
     assert hl.edited_path("repl_shell_exec", {"code": "open('x','w')"}) is None
     assert hl.edited_path("edit_file", "not json") is None
 

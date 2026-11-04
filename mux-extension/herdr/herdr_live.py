@@ -5,7 +5,9 @@ Pure logic (no I/O except Tails.flush), so it is unit-tested without Mux or Herd
     which every Herdr mod sees through terminals()[i].labels.
   * control_line: one muxbar action -> one Mux slash command (only commands Mux lets an
     extension run with command/run).
-  * edited_path: the file an edit/write tool call touched (for the follow pane).
+  * edited_path / code_paths / changed_since: which file a tool call touched (for the follow pane):
+    file tools by their path argument; REPL and shell calls by a quoted or bare path in the code or
+    command that was created or changed while the call ran.
   * Tails: a rolling markdown tail per sub-agent record, written for the tail overlay.
   * footer_flags: plan/ultra/giga/sub mode and effort read from Mux's TUI footer, because
     session/info does not report them.
@@ -33,6 +35,8 @@ SIMPLE = {
 }
 ARG_RE = re.compile(r"^[\w .,:;!?'\"()\[\]@#%+=/\\-]{1,300}$")
 EDIT_VERBS = ("edit_file", "apply_patch", "str_replace", "write_file", "create_file", "apply_diff")
+READ_VERBS = ("read_text_file", "read_file", "read_media_file", "view_file", "open_file")
+CODE_VERBS = ("repl", "python", "shell", "execute_command", "run_command", "exec_command", "bash", "powershell")
 PATH_KEYS = ("path", "file_path", "filePath", "file", "filename", "target_file")
 
 
@@ -77,23 +81,77 @@ def control_line(action, arg=None):
     raise ValueError(f"unknown action {action!r}")
 
 
-def edited_path(tool, args):
-    """The file an edit/write tool call touches, else None. args: dict or JSON text."""
-    t = (tool or "").lower()
-    if not (any(v in t for v in EDIT_VERBS) or t.endswith("_patch") or t in ("edit", "write", "patch")):
-        return None
+def _args_dict(args):
     if isinstance(args, str):
         try:
             args = json.loads(args)
         except ValueError:
             return None
-    if not isinstance(args, dict):
+    return args if isinstance(args, dict) else None
+
+
+def edited_path(tool, args):
+    """The file a file tool call names directly (edit, write, patch, create or read), else None.
+    args: dict or JSON text. Read tools count too: the follow pane shows what the agent looks at."""
+    t = (tool or "").lower()
+    if not (any(v in t for v in EDIT_VERBS + READ_VERBS) or t.endswith("_patch") or t in ("edit", "write", "patch", "read")):
+        return None
+    a = _args_dict(args)
+    if a is None:
         return None
     for k in PATH_KEYS:
-        v = args.get(k)
+        v = a.get(k)
         if isinstance(v, str) and v.strip():
             return v.strip()
     return None
+
+
+# Paths quoted in REPL code or a shell command: "C:\\x\\y.md", 'docs/a.txt', /tmp/x.log ... Only strings
+# that look like a file (an extension, or a separator). A path built in code (os.path.join) is not seen.
+_QUOTED = re.compile(r"""r?(["'])((?:[A-Za-z]:)?[^"'\n]{1,260}?\.[A-Za-z0-9]{1,8})\1""")
+_BARE = re.compile(r"""(?:^|[\s>|=(])((?:[A-Za-z]:[\\/]|[~./\\])[^\s"'<>|;&()]{1,260}?\.[A-Za-z0-9]{1,8})(?=$|[\s"'<>|;&)])""")
+
+
+def code_paths(tool, args):
+    """Candidate files named in a REPL / shell call's code or command, in order, de-duplicated."""
+    t = (tool or "").lower()
+    if not any(v in t for v in CODE_VERBS):
+        return []
+    a = _args_dict(args)
+    if a is None:
+        return []
+    text = "\n".join(str(a.get(k)) for k in ("code", "command", "cmd", "script", "input") if a.get(k))
+    out = []
+    for m in _QUOTED.finditer(text):
+        out.append(m.group(2))
+    for m in _BARE.finditer(text):
+        out.append(m.group(1))
+    seen, uniq = set(), []
+    for p in out:
+        p = p.replace("\\\\", "\\").strip()
+        if p.startswith(("http:", "https:")) or p.lower() in seen:
+            continue
+        seen.add(p.lower())
+        uniq.append(p)
+    return uniq[:40]
+
+
+def changed_since(paths, since, cwd=None):
+    """The candidate that was created or modified at/after `since` (epoch s), newest first, else None."""
+    best = None
+    for p in paths:
+        full = os.path.expanduser(p)
+        if not os.path.isabs(full) and cwd:
+            full = os.path.join(cwd, full)
+        try:
+            st = os.stat(full)
+        except OSError:
+            continue
+        if not os.path.isfile(full) or st.st_mtime < since - 1.0:
+            continue
+        if best is None or st.st_mtime > best[0]:
+            best = (st.st_mtime, os.path.normpath(full))
+    return best[1] if best else None
 
 
 # `225.8k/1000k (23%)` or, early in a session, `0/1000k (0%)`.
@@ -140,11 +198,14 @@ class Live:
                   "plan": "", "ultra": "", "giga": "", "sub": "", "compacting": "0", "kids": "0",
                   "file": "", "fileat": "", "port": "", "session": ""}
         self.sent = {}
+        self.pending = []  # (started epoch s, candidate paths) for REPL / shell calls not seen writing yet
+        self.cwd = None  # where relative paths in REPL / shell code resolve (the session's cwd)
 
     def update_info(self, info):
         if not isinstance(info, dict):
             return
         ctx = info.get("context") or {}
+        self.cwd = info.get("cwd") or self.cwd
         self.s.update(agent=info.get("agent") or "", model=info.get("model") or "",
                       session=info.get("sessionId") or "",
                       pct=str(ctx.get("percent", "")) if info.get("inSession") else "",
@@ -181,14 +242,38 @@ class Live:
         elif name == "tool_call":
             p = edited_path(ev.get("tool"), ev.get("args"))
             if p:
-                self.s["file"] = p
-                self.s["fileat"] = str(int(time.time() * 1000))
+                self.touch(p)
+            else:
+                cands = code_paths(ev.get("tool"), ev.get("args"))
+                if cands:  # REPL / shell: follow whichever named file it wrote, once it has run
+                    self.pending.append((time.time(), cands))
+                    del self.pending[:-8]
+        elif name == "tool_result" and self.pending:
+            self.resolve_pending(self.cwd)
         elif name == "command_executed":
             cmd = (data.get("command") or ev.get("summary") or "").split(" ")[0].lower()
             return cmd in ("/plan", "/ultra", "/giga", "/sub", "/psub", "/effort", "/max")
         elif name == "turn_complete":
             return True
         return False
+
+    def touch(self, path):
+        """Point the follow pane at `path`. fileat changes on every touch, so re-editing the file
+        that is already shown still makes the pane reload it."""
+        self.s["file"] = path
+        self.s["fileat"] = str(int(time.time() * 1000))
+
+    def resolve_pending(self, cwd=None):
+        """After a REPL / shell call returns: follow the newest named file it created or changed.
+        Also called on a timer, because a background job can write after its call returned."""
+        keep = []
+        for since, cands in self.pending:
+            hit = changed_since(cands, since, cwd)
+            if hit:
+                self.touch(hit)
+            elif time.time() - since < 120:
+                keep.append((since, cands))
+        self.pending = keep
 
     def labels(self):
         return {f"mux.{k}": v for k, v in self.s.items()}

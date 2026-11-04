@@ -43,8 +43,15 @@ Mods that make Mux feel native in Herdr (need the extension):
   icon (code, web, memory, data, docs, review, ...).
 - **Sub-agents everywhere**: Graph, Board, Wall and Zen show each delegation and background job
   with its role icon. Clicking one opens its live transcript (Wall tiles show it inline).
-- **`mux-follow`**: a read-only code view that follows the file Mux is editing (Graph's side
-  panel, `ctrl-shift-f`), with a Follow toggle. `herdr_show` opens it for any file.
+- **`mux-follow`**: a read-only code view that follows the file Mux is working on (Graph's side
+  panel, `ctrl-shift-f`), with a Follow toggle. `herdr_show` opens it for any file. What it follows:
+
+  | Agent action | Followed |
+  |---|---|
+  | Filesystem write / edit / create / patch | yes (by its path argument), and re-editing the shown file reloads it |
+  | Filesystem read | yes |
+  | REPL or shell call that names a file as a literal path and creates or changes it | yes, after the call returns (background jobs: within a few seconds) |
+  | REPL or shell call that builds the path in code (`os.path.join`) or only reads a file | no |
 
 Agents: follow [AGENTS.md](AGENTS.md). People: the steps below.
 

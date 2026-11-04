@@ -1,6 +1,8 @@
-// Mux follow: a read-only code view of the file a Mux agent is editing.
+// Mux follow: a read-only code view of the file a Mux agent is working on.
 // Follow on: shows the file named by the `mux.file` label of a Mux terminal (props.terminal, else the
-// most recently active Mux) and reloads it as it changes. Follow off: stays on the current file.
+// most recently active Mux), reloading on every touch (`mux.fileat`) and when the file changes.
+// The extension sets it for Filesystem read/write/edit (by path) and for REPL / shell calls that
+// name a file in their code or command and create or change it. Follow off: stays on the current file.
 // props { file } (herdr_show) opens one file with Follow off.
 import { View, div } from "gpui-kit";
 import { h_flex, v_flex, Editor, EditorState } from "gpui-base";
@@ -59,7 +61,10 @@ export default class MuxFollow extends View {
     const t = theme();
     const mux = muxTerminal();
     const target = mux?.labels?.["mux.file"] || null;
-    if (this.follow && target && target !== this.file) this.load(target, cx);
+    const at = mux?.labels?.["mux.fileat"] || "";
+    // Reload on every touch (fileat), not only when the file changes: an edit of the file already
+    // shown must refresh it even if the folder watch missed the write.
+    if (this.follow && target && (target !== this.file || at !== this.at)) { this.at = at; this.load(target, cx); }
     const name = this.file ? this.file.split(/[\\/]/).slice(-2).join(" / ") : "";
     const who = mux ? `${mux.labels["mux.agent"] || "Mux"} · ${mux.address}` : "no Mux reporting";
     const toggle = h_flex().id("mf-follow").h(22).px(8).gap(6).items_center().rounded(5).cursor_pointer()

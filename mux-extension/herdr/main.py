@@ -204,6 +204,8 @@ class MuxState:
                     with self.lock:
                         self.live.update_flags(flags)
                 with self.lock:
+                    if self.live.pending:  # a background job may write after its call returned
+                        self.live.resolve_pending(self.live.cwd)
                     changed = self.live.diff()
                 if changed:
                     hc("label", ME, *[f"{k}={v}" for k, v in changed.items()], timeout=10)

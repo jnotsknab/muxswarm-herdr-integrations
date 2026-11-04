@@ -57,7 +57,10 @@ Messages you send arrive wrapped as `<hc from="<you>">...</hc>`; that is normal.
 - **Mux strip** (`muxbar`, ctrl-shift-m): context gauge, effort and context-window sliders, Plan /
   Ultra / Giga, Compact, Prune, Retry, Undo, Diff, Review, Cost, More..., Ask Mux box. Buttons queue
   the command; Mux runs it when idle.
-- **Follow pane** (`mux-follow`, ctrl-shift-f in Graph): shows the file you are editing, live.
+- **Follow pane** (`mux-follow`, ctrl-shift-f in Graph; also in `mux-review`): shows the file you are
+  working on, live. It follows Filesystem read / write / edit (by path), and REPL or shell calls that
+  name the file as a literal path in their code or command and create or change it. A path you build
+  in code (`os.path.join(...)`) is not seen: use a literal path, or `herdr_show what=file` to point it.
 - **Looks**: `/theme herdr-graphite|ink|moss|paper` (Mux) paired with the same Herdr theme; the looks
   strip switches both.
 - **Sub-agents** (your delegations / background jobs) appear in Graph, Board, Wall and the Agents
