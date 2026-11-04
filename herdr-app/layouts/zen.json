@@ -1,0 +1,42 @@
+{
+  "id": "root",
+  "type": "column",
+  "titlebar": "none",
+  "traffic_lights": [
+    14,
+    14
+  ],
+  "theme": "moss",
+  "font_size": 15,
+  "terminal_padding": [
+    28,
+    22
+  ],
+  "background": "background",
+  "padding": [
+    10,
+    10
+  ],
+  "children": [
+    {
+      "id": "main",
+      "type": "block",
+      "window_drag": false,
+      "content": {
+        "agent": "focused"
+      }
+    }
+  ],
+  "floating": [
+    {
+      "id": "dock",
+      "content": {
+        "mod": "zen-dock"
+      },
+      "edge": "left",
+      "align": "center",
+      "peek": 40
+    }
+  ],
+  "preview": "layouts/zen.svg"
+}

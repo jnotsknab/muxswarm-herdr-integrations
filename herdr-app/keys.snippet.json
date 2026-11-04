@@ -1,0 +1,18 @@
+{
+  "global": {
+    "ctrl-alt-3": "layout.switch:graph",
+    "ctrl-alt-4": "layout.switch:board",
+    "ctrl-alt-5": "layout.switch:wall",
+    "ctrl-alt-6": "layout.switch:ops",
+    "ctrl-alt-7": "layout.switch:zen"
+  },
+  "layout:graph": {
+    "ctrl-shift-g": "layout.toggle:graph"
+  },
+  "layout:board": {
+    "ctrl-shift-g": "layout.toggle:board"
+  },
+  "layout:ops": {
+    "ctrl-shift-g": "layout.toggle:ops"
+  }
+}

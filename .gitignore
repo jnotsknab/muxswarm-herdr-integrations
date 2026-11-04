@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+herdr-app/mods/ops/ops.json
+# written by `herdr-app check` for editor typing
+herdr-app/mods/*/gpui-kit.d.ts
+herdr-app/mods/*/herdr.d.ts
+herdr-app/mods/*/jsconfig.json

@@ -1,0 +1,9 @@
+{
+  "pinned": {
+    "my-server": [
+      "nginx",
+      "postgresql",
+      "my-app"
+    ]
+  }
+}

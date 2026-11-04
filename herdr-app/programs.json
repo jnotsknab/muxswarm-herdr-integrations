@@ -1,0 +1,19 @@
+{
+  "programs": {
+    "mux-swarm": {
+      "name": "Mux-Swarm",
+      "icon": "mux/mux.svg",
+      "tint": false,
+      "tile": "#09090b",
+      "color": "#64B4DC",
+      "match": [
+        "MuxSwarm",
+        "muxswarm",
+        "mux-swarm"
+      ],
+      "run": [
+        "MuxSwarm"
+      ]
+    }
+  }
+}
