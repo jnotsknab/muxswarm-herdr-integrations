@@ -90,6 +90,21 @@
           ]
         },
         {
+          "id": "muxbar",
+          "type": "block",
+          "size": {
+            "px": 44
+          },
+          "border": {
+            "width": 1,
+            "color": "border"
+          },
+          "radius": 8,
+          "content": {
+            "mod": "muxbar"
+          }
+        },
+        {
           "id": "status",
           "type": "block",
           "size": {

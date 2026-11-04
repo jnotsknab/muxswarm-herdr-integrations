@@ -5,6 +5,7 @@
 import { View, div, svg, image, PathBuilder } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { machines, spaces, panes, terminals, focused, theme, run } from "herdr";
+import { recordIcon, openTail } from "./mux.js";
 
 const COL = 232; // column pitch
 const NODE_W = 196;
@@ -48,6 +49,7 @@ function buildTree() {
       kind: "sub",
       id: `r-${t.address}-${rid}`,
       address: t.address,
+      rec: { key: `${t.address}/${rid}`, parent: t.address, rid, agent: r.title || rid },
       label: r.title || rid,
       sub: one(r.msg) || r.state,
       status: r.state === "error" ? "blocked" : r.state,
@@ -186,6 +188,7 @@ export default class Graph extends View {
     const box = (el, bg) => div().size(26).flex_none().rounded(7).bg(bg).flex().items_center().justify_center().child(el);
     const p = n.program;
     if (n.kind === "hub") return box(image("mux/herdr.png").w(18).h(18), t.raised);
+    if (n.rec) return box(recordIcon(n.rec.agent, 14, t[n.status] ?? t.muted), t.raised);
     if (p?.icon) {
       const glyph = p.tint ? svg(p.icon).size(15).text_color(p.color ?? t.foreground) : image(p.icon).w(p.tile ? 18 : 26).h(p.tile ? 18 : 26);
       return p.tile ? box(glyph, p.tile) : p.tint ? box(glyph, t.raised) : glyph.flex_none().rounded(7);
@@ -200,6 +203,7 @@ export default class Graph extends View {
     else if (n.kind === "space") run("space.select", { id: n.space });
     else if (n.kind === "tab") run("tab.select", { id: n.tab });
     else if (n.kind === "pane") run("pane.focus", { pane: n.pane });
+    else if (n.rec) openTail(n.rec);
     else if (n.kind === "sub") run("terminal.peek", { terminal: n.address });
   }
 

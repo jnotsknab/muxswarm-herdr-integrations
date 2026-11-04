@@ -61,7 +61,7 @@
               },
               "min": 90,
               "content": {
-                "mod": "agents"
+                "mod": "agents-mux"
               }
             }
           ]
@@ -103,6 +103,21 @@
           "padding": 0,
           "content": {
             "mod": "wall"
+          }
+        },
+        {
+          "id": "muxbar",
+          "type": "block",
+          "size": {
+            "px": 44
+          },
+          "border": {
+            "width": 1,
+            "color": "border"
+          },
+          "radius": 8,
+          "content": {
+            "mod": "muxbar"
           }
         },
         {

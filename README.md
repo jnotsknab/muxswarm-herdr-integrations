@@ -17,7 +17,13 @@ the native app built on herdr-core.
   see its screen, then send it text, or spawn a helper from the input.
 - **Agent tools**: `herdr_list`, `herdr_spawn`, `herdr_read`, `herdr_send`, `herdr_wait`,
   `herdr_stop`. A Mux agent can hand work to Claude Code, Codex or another Mux in its own Herdr pane,
-  wait for it and read the result.
+  wait for it and read the result. `herdr_ask` asks an idle agent a question and returns its answer;
+  `herdr_focus` brings an agent into view; `herdr_show` opens a file viewer, a terminal or a layout
+  for the user; `herdr_screen` returns what the window shows (optionally a screenshot).
+- **Live Mux state for layouts**: `mux.*` labels on Mux's terminal (agent, model, context use,
+  effort, plan/ultra/giga, compacting, sub-agent count, last edited file), a loopback control
+  endpoint (port + token are labels too) and a rolling transcript per sub-agent, which the
+  `muxbar`, `mux-follow` and `agents-mux` mods use.
 
 Or `hooks/`: the status part alone, as a plain Mux hook.
 
@@ -25,6 +31,20 @@ Or `hooks/`: the status part alone, as a plain Mux hook.
 plus layouts: Graph (live node graph of machines, spaces, tabs, agents and sub-agents), Board
 (kanban by status), Wall (grid of every agent's screen), Zen (one agent and a status drawer),
 Ops (remote machines: health and services). **hc templates** `mux-code` and `mux-review`.
+
+Mods that make Mux feel native in Herdr (need the extension):
+
+- **`muxbar`**: a control strip (Graph, Wall, Board; `ctrl-shift-m` toggles it): context gauge,
+  effort and context-window sliders, Plan/Ultra/Giga toggles, Compact, Prune, Retry, Undo, Diff,
+  Review, Cost, a More menu (prune kinds, handoff, tokens, cost by model, status, doctor, limits,
+  view toggles, ...), an Ask Mux box, and a chip per running sub-agent. Mux queues these and runs
+  them when the session is idle. `muxbar/ask.js` lets any other mod add an "Ask Mux" button.
+- **`agents-mux`**: Herdr's Agents sidebar plus Mux sub-agents under their Mux, each with a role
+  icon (code, web, memory, data, docs, review, ...).
+- **Sub-agents everywhere**: Graph, Board, Wall and Zen show each delegation and background job
+  with its role icon. Clicking one opens its live transcript (Wall tiles show it inline).
+- **`mux-follow`**: a read-only code view that follows the file Mux is editing (Graph's side
+  panel, `ctrl-shift-f`), with a Follow toggle. `herdr_show` opens it for any file.
 
 Agents: follow [AGENTS.md](AGENTS.md). People: the steps below.
 

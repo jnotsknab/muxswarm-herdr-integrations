@@ -7,12 +7,18 @@
     "ctrl-alt-7": "layout.switch:zen"
   },
   "layout:graph": {
-    "ctrl-shift-g": "layout.toggle:graph"
+    "ctrl-shift-g": "layout.toggle:graph",
+    "ctrl-shift-m": "layout.toggle:muxbar",
+    "ctrl-shift-f": "layout.toggle:panel"
   },
   "layout:board": {
-    "ctrl-shift-g": "layout.toggle:board"
+    "ctrl-shift-g": "layout.toggle:board",
+    "ctrl-shift-m": "layout.toggle:muxbar"
   },
   "layout:ops": {
     "ctrl-shift-g": "layout.toggle:ops"
+  },
+  "layout:wall": {
+    "ctrl-shift-m": "layout.toggle:muxbar"
   }
 }

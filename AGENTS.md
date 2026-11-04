@@ -8,10 +8,10 @@ Back up everything you change. Report what you did and how to undo it at the end
 
 | Path | Installs to | Purpose |
 |---|---|---|
-| `mux-extension/herdr/` | a folder in Mux `extensions.dirs` | **Recommended.** Status (with sub-agent records), `/herdr` command, footer chip, docked agents panel, `herdr_*` agent tools |
+| `mux-extension/herdr/` | a folder in Mux `extensions.dirs` | **Recommended.** Status (with sub-agent records), `/herdr` command, footer chip, docked agents panel, `herdr_*` agent tools, live `mux.*` labels + loopback control endpoint + sub-agent transcripts for the mods |
 | `hooks/herdr-app-bridge.py` + `hooks/swarm-hooks.json` | `<MUX_HOME>/Hooks/` + Swarm.json `hooks[]` | Status only, as a plain hook. Use **either** this or the extension, not both |
 | `herdr-app/programs.json` + `herdr-app/mux/` | `<HERDR_APP>/` | Mux icon/name in Herdr, Mux in the `+` agent menu |
-| `herdr-app/mods/*` | `<HERDR_APP>/mods/` | graph, board, wall, zen-dock, ops panels |
+| `herdr-app/mods/*` | `<HERDR_APP>/mods/` | graph, board, wall, zen-dock, ops panels; `muxbar` (Mux controls + Ask Mux), `agents-mux` (sidebar with Mux sub-agents), `mux-follow` (follow Mux's edits). graph/board/wall/zen-dock/agents-mux carry a copy of `muxbar/mux.js` and need `muxbar` installed (role icons) |
 | `herdr-app/layouts/*` | `<HERDR_APP>/layouts/` | Graph, Board, Wall, Zen, Ops layouts (+ preview SVGs) |
 | `herdr-app/keys.snippet.json` | merged into `<HERDR_APP>/keys.json` | optional layout shortcuts |
 | `hc-templates/*.md` | herdr-core templates dir | `mux-code` / `mux-review` helpers for `hc run` and `herdr_spawn` |
@@ -45,7 +45,8 @@ Back up everything you change. Report what you did and how to undo it at the end
 3. Keep `-I -S` in `process.args` (skips slow `site`/`.pth` start-up; the code is stdlib only). The `process.command` is `python`. If the user's Python is named differently, edit
    `extension.json` in the installed copy.
 4. Optional, for agent tools: add `"herdr"` to the `mcpServers` list of the agents that should get
-   `herdr_list`, `herdr_spawn`, `herdr_read`, `herdr_send`, `herdr_wait`, `herdr_stop` in Swarm.json
+   `herdr_list`, `herdr_spawn`, `herdr_read`, `herdr_send`, `herdr_wait`, `herdr_stop`, `herdr_ask`,
+   `herdr_focus`, `herdr_show`, `herdr_screen` in Swarm.json
    (back it up first), or a `toolPatterns` entry `herdr_*`.
 5. If the old status hook (`herdr-app-*` / `herdr-app-status` entries) is installed, remove those
    entries from Swarm.json so status is not reported twice.
@@ -88,7 +89,9 @@ PATH. Verify with `hc templates`.
    Herdr pane** and accepts the "enable hooks" prompt if one appears.
 2. Extension: `/extensions` lists `herdr` as running; `/herdr` prints the Herdr terminals; the footer
    shows `herdr N`; `/herdr panel` docks the agents panel.
-3. `hc get <address> --json` for that pane shows `status.state` = `idle` and title `mux: <agent>`.
+3. `hc get <address> --json` for that pane shows `status.state` = `idle` and title `mux: <agent>`,
+   and `labels` has `mux.agent`, `mux.pct`, `mux.port` and `mux.token`. The muxbar strip shows
+   the session; its buttons and sliders are queued in Mux (run when idle).
    One message: `working` then `done`. In plan mode an `ask_user` prompt shows `blocked`
    (kind `question`). With `/sub`, a delegation shows a child record under `records` while it runs.
 4. Debugging: set `MUX_HERDR_APP_DEBUG=1` and read `<tmp>/mux-herdr-app-hook.log`; `/extensions`

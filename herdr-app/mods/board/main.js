@@ -2,6 +2,7 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { agents, terminals, spaces, theme, run, setAgentOrder } from "herdr";
+import { recordIcon, openTail } from "./mux.js";
 
 const COLS = [
   { id: "blocked", empty: "Nothing needs you", label: "Needs you" },
@@ -37,6 +38,7 @@ export default class Board extends View {
       for (const [rid, r] of Object.entries(t.records ?? {})) {
         list.push({
           address: `${t.address}#${rid}`, peek: t.address, status: r.state === "error" ? "blocked" : r.state, program: t.program,
+          rec: { key: `${t.address}/${rid}`, parent: t.address, rid, agent: r.title || rid },
           title: r.title || rid, msg: r.msg ?? "", where: `inside ${terms.get(t.address)?.name || t.address}`, since: t.status_ms, sub: true,
         });
       }
@@ -54,7 +56,8 @@ export default class Board extends View {
   card(t, c) {
     const color = t[c.status] ?? t.dim;
     const p = c.program;
-    const icon = p?.icon ? (p.tint ? svg(p.icon).size(16).text_color(p.color ?? t.foreground) : image(p.icon).w(18).h(18)) : null;
+    const icon = c.rec ? recordIcon(c.title, 15, t.accent)
+      : p?.icon ? (p.tint ? svg(p.icon).size(16).text_color(p.color ?? t.foreground) : image(p.icon).w(18).h(18)) : null;
     return v_flex()
       .id(`card-${c.address}`)
       .p(10)
@@ -66,14 +69,14 @@ export default class Board extends View {
       .border_l(3)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
-      .on_click(() => (c.pane ? run("pane.focus", { pane: c.pane }) : run("terminal.peek", { terminal: c.peek ?? c.address })))
+      .on_click(() => (c.rec ? openTail(c.rec) : c.pane ? run("pane.focus", { pane: c.pane }) : run("terminal.peek", { terminal: c.peek ?? c.address })))
       .on_mouse_down("right", (_e, cx) => {
         cx.stop_propagation();
         run("terminal.peek", { terminal: c.peek ?? c.address });
       })
       .child(
         h_flex().gap(8).items_center()
-          .child(div().size(24).flex_none().rounded(6).bg(p?.tile ?? t.raised).flex().items_center().justify_center().when(Boolean(icon), (el) => el.child(icon)))
+          .child(div().size(24).flex_none().rounded(6).bg(c.rec ? t.raised : p?.tile ?? t.raised).flex().items_center().justify_center().when(Boolean(icon), (el) => el.child(icon)))
           .child(div().flex_1().min_w(0).text_size(13).font_semibold().text_color(t.foreground).whitespace_nowrap().overflow_hidden().text_ellipsis().child(c.title))
           .when(c.status === "working", (el) => el.child(svg("mods/workspace-chrome/spinner.svg").size(12).text_color(color).spin(900)))
           .when(c.status === "blocked", (el) => el.child(div().size(8).rounded(4).bg(color).loop("opacity", { from: 0.3, to: 1, period: 1100 }))),
